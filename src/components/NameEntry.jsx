@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const NameEntry = ({ players, setPlayers, onNext }) => {
   const handleChange = (e, player) => {
@@ -9,56 +10,112 @@ const NameEntry = ({ players, setPlayers, onNext }) => {
   };
 
   return (
-    <div className="screen-container">
-      <div style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div style={{
+      minHeight: '100vh', width: '100%',
+      background: 'radial-gradient(circle at center, #2a0845 0%, #000000 100%)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '24px', position: 'relative', overflow: 'hidden'
+    }}>
+      
+      {/* Arka Plan Dekorasyonları */}
+      <motion.div
+        animate={{ y: [0, -20, 0], opacity: [0.1, 0.3, 0.1] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: 'absolute', top: '15%', left: '10%', fontSize: '4rem', filter: 'blur(3px)' }}
+      >👩</motion.div>
+      <motion.div
+        animate={{ y: [0, 20, 0], opacity: [0.1, 0.3, 0.1] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', filter: 'blur(3px)' }}
+      >👱‍♂️</motion.div>
+      <div style={{
+        position: 'absolute', top: '20%', left: '20%', width: '300px', height: '300px',
+        background: 'radial-gradient(circle, rgba(157,78,221,0.15) 0%, transparent 70%)', borderRadius: '50%'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '20%', right: '20%', width: '300px', height: '300px',
+        background: 'radial-gradient(circle, rgba(255,121,0,0.15) 0%, transparent 70%)', borderRadius: '50%'
+      }} />
+
+      <motion.h2 
+        initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+        style={{ fontSize: '2.5rem', marginBottom: '40px', color: 'white', textAlign: 'center', zIndex: 10, fontWeight: '900' }}
+      >
+        <span style={{ color: 'var(--color-purple)' }}>KİM </span> 
+        <span style={{ color: 'white' }}>KİMDİR?</span>
+      </motion.h2>
+
+      <div style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '30px', zIndex: 10 }}>
         
         {/* Kadın Oyuncu Alanı */}
-        <div className="glass-panel" style={{ padding: '2rem', borderTop: '4px solid var(--color-purple)' }}>
-          <h3 style={{ color: 'var(--color-purple)', marginBottom: '1rem', textAlign: 'center' }}>Kadın Oyuncu İsmi</h3>
+        <motion.div 
+          initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }}
+          style={{
+            background: 'rgba(0,0,0,0.4)', padding: '25px', borderRadius: '24px',
+            border: '1px solid rgba(157,78,221,0.3)', boxShadow: '0 10px 30px rgba(157,78,221,0.15)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <h3 style={{ color: 'var(--color-purple)', marginBottom: '15px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.5rem' }}>👩</span> Kadın Oyuncu
+          </h3>
           <input 
             type="text" 
             value={players.woman.name}
             onChange={(e) => handleChange(e, 'woman')}
             style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid var(--color-purple)',
-              background: 'rgba(0,0,0,0.5)',
-              color: 'white',
-              fontSize: '1.2rem',
-              textAlign: 'center',
-              outline: 'none'
+              width: '100%', padding: '16px', borderRadius: '12px',
+              border: '2px solid rgba(157,78,221,0.5)', background: 'rgba(255,255,255,0.05)',
+              color: 'white', fontSize: '1.2rem', textAlign: 'center', outline: 'none',
+              transition: 'all 0.3s'
             }}
+            onFocus={(e) => e.target.style.background = 'rgba(157,78,221,0.1)'}
+            onBlur={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
             placeholder="İsim girin..."
           />
-        </div>
+        </motion.div>
 
         {/* Erkek Oyuncu Alanı */}
-        <div className="glass-panel" style={{ padding: '2rem', borderTop: '4px solid var(--color-orange)' }}>
-          <h3 style={{ color: 'var(--color-orange)', marginBottom: '1rem', textAlign: 'center' }}>Erkek Oyuncu İsmi</h3>
+        <motion.div 
+          initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}
+          style={{
+            background: 'rgba(0,0,0,0.4)', padding: '25px', borderRadius: '24px',
+            border: '1px solid rgba(255,121,0,0.3)', boxShadow: '0 10px 30px rgba(255,121,0,0.15)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <h3 style={{ color: 'var(--color-orange)', marginBottom: '15px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.5rem' }}>👱‍♂️</span> Erkek Oyuncu
+          </h3>
           <input 
             type="text" 
             value={players.man.name}
             onChange={(e) => handleChange(e, 'man')}
             style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid var(--color-orange)',
-              background: 'rgba(0,0,0,0.5)',
-              color: 'white',
-              fontSize: '1.2rem',
-              textAlign: 'center',
-              outline: 'none'
+              width: '100%', padding: '16px', borderRadius: '12px',
+              border: '2px solid rgba(255,121,0,0.5)', background: 'rgba(255,255,255,0.05)',
+              color: 'white', fontSize: '1.2rem', textAlign: 'center', outline: 'none',
+              transition: 'all 0.3s'
             }}
+            onFocus={(e) => e.target.style.background = 'rgba(255,121,0,0.1)'}
+            onBlur={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
             placeholder="İsim girin..."
           />
-        </div>
+        </motion.div>
 
-        <button className="btn-primary" style={{ marginTop: '2rem', width: '100%' }} onClick={onNext}>
-          DEVAM
-        </button>
+        <motion.button 
+          initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}
+          whileTap={{ scale: 0.95 }}
+          className="btn-primary" 
+          style={{ 
+            marginTop: '10px', width: '100%', padding: '18px', fontSize: '1.2rem',
+            background: 'linear-gradient(135deg, #ff3c78, #ff7900)',
+            boxShadow: '0 0 25px rgba(255,60,120,0.4)'
+          }} 
+          onClick={onNext}
+        >
+          DEVAM ET 🚀
+        </motion.button>
       </div>
     </div>
   );

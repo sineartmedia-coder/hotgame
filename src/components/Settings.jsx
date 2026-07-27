@@ -27,18 +27,19 @@ const CATEGORIES = {
 const Settings = ({ settings, setSettings, onNext }) => {
   const [activeTab, setActiveTab] = useState('genel');
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const [taskGenderTab, setTaskGenderTab] = useState('woman'); // 'woman' or 'man'
 
-  // Kategorilere göre kartları grupla
+  // Kategorilere ve cinsiyete göre kartları grupla
   const cardsByCategory = useMemo(() => {
     const grouped = {};
     Object.keys(CATEGORIES).forEach(c => grouped[c] = []);
     MOCK_CARDS.forEach(card => {
-      if (grouped[card.category]) {
+      if (card.target === taskGenderTab && grouped[card.category]) {
         grouped[card.category].push(card);
       }
     });
     return grouped;
-  }, []);
+  }, [taskGenderTab]);
 
   const handleInputChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value === '' ? '' : Number(value) }));
@@ -209,8 +210,33 @@ const Settings = ({ settings, setSettings, onNext }) => {
           {/* GÖREV KARTLARI */}
           {activeTab === 'gorevler' && (
             <motion.div key="gorevler" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              
+              {/* Gender Toggle */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <button
+                  onClick={() => setTaskGenderTab('woman')}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                    background: taskGenderTab === 'woman' ? 'var(--color-purple)' : 'rgba(0,0,0,0.3)',
+                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  👩 Kadın Görevleri
+                </button>
+                <button
+                  onClick={() => setTaskGenderTab('man')}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                    background: taskGenderTab === 'man' ? 'var(--color-orange)' : 'rgba(0,0,0,0.3)',
+                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+                  }}
+                >
+                  👱‍♂️ Erkek Görevleri
+                </button>
+              </div>
+
               <p style={{ color: '#aaa', marginBottom: '20px', fontSize: '0.9rem' }}>
-                Kategoriyi veya içindeki özel görevleri tek tek kapatabilirsiniz.
+                {taskGenderTab === 'woman' ? "Kadın oyuncuya" : "Erkek oyuncuya"} çıkacak görevleri düzenliyorsunuz.
               </p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -1,6 +1,7 @@
 export const MOCK_CARDS = [
   {
     id: 1,
+    target: 'man',
     category: 'erotik',
     title: 'Boyun Öpücüğü',
     text: 'Partnerinin boynundan öperek aşağı in.',
@@ -10,6 +11,7 @@ export const MOCK_CARDS = [
   },
   {
     id: 2,
+    target: 'woman',
     category: 'erotik',
     title: 'Kucak Dansı',
     text: 'Partnerine kucak dansı yap.',
@@ -19,6 +21,7 @@ export const MOCK_CARDS = [
   },
   {
     id: 3,
+    target: 'man',
     category: 'igrenc',
     title: 'Ayak Fantezisi',
     text: 'Partnerinin ayak parmağını yala.',
@@ -28,6 +31,7 @@ export const MOCK_CARDS = [
   },
   {
     id: 4,
+    target: 'woman',
     category: 'zor',
     title: 'Akrobat',
     text: 'Amuda kalkmayı dene.',
@@ -37,6 +41,7 @@ export const MOCK_CARDS = [
   },
   {
     id: 5,
+    target: 'man',
     category: 'sureli',
     title: 'Göz Teması',
     text: 'Partnerinle göz temasını bozmadan 1 dakika bekle.',
@@ -46,6 +51,7 @@ export const MOCK_CARDS = [
   },
   {
     id: 6,
+    target: 'woman',
     category: 'sayili',
     title: 'Şınav Şov',
     text: 'Şınav çek.',
@@ -55,6 +61,17 @@ export const MOCK_CARDS = [
   },
   {
     id: 7,
+    target: 'woman',
+    category: 'ortak',
+    title: 'Müzik Ziyafeti',
+    text: 'Beraber en sevdiğiniz şarkıyı söyleyin.',
+    points: 5,
+    duration: 0,
+    isCountable: false,
+  },
+  {
+    id: 8,
+    target: 'man',
     category: 'ortak',
     title: 'Müzik Ziyafeti',
     text: 'Beraber en sevdiğiniz şarkıyı söyleyin.',

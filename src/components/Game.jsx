@@ -4,19 +4,19 @@ import { MOCK_CARDS } from '../data/cards';
 
 const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [currentPlayer, setCurrentPlayer] = useState(startingPlayer);
-  
-  // Sadece ayarlarda seçilen görevleri içeren bir deste oluştur
-  const [deck, setDeck] = useState(() => {
+  // Kadın ve Erkek için ayrı desteler oluştur
+  const createDeck = (targetGender) => {
     const enabledCards = MOCK_CARDS.filter(card => {
-      // Kategori açık mı?
+      if (card.target !== targetGender) return false;
       if (!settings.categories[card.category]) return false;
-      // Spesifik görev kapalı mı?
       if (settings.disabledTasks.includes(card.id)) return false;
       return true;
     });
-    // Karıştır
     return enabledCards.sort(() => Math.random() - 0.5);
-  });
+  };
+
+  const [deckWoman, setDeckWoman] = useState(() => createDeck('woman'));
+  const [deckMan, setDeckMan] = useState(() => createDeck('man'));
   
   const [currentCard, setCurrentCard] = useState(null);
   const [cardState, setCardState] = useState('hidden'); // hidden, revealed, executing, reviewing
@@ -31,10 +31,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     const interval = setInterval(() => {
       setPlayers(prev => {
         const current = prev[currentPlayer];
-        if (current.timeRemaining <= 0) {
-          // Süre bittiğinde otomatik red edilebilir veya sadece 0'da kalabilir. Şimdilik 0'da kalsın.
-          return prev;
-        }
+        if (current.timeRemaining <= 0) return prev;
         return {
           ...prev,
           [currentPlayer]: { ...current, timeRemaining: current.timeRemaining - 1 }
@@ -52,13 +49,19 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   };
 
   const drawCard = () => {
-    if (deck.length === 0) {
-      onFinish();
+    const currentDeck = currentPlayer === 'woman' ? deckWoman : deckMan;
+    if (currentDeck.length === 0) {
+      switchTurn(true); // O anki oyuncunun destesi bittiyse diğerine geç, ikisi de bittiyse bitir
       return;
     }
-    const card = deck[0];
+    const card = currentDeck[0];
     setCurrentCard(card);
-    setDeck(deck.slice(1));
+    
+    if (currentPlayer === 'woman') {
+      setDeckWoman(currentDeck.slice(1));
+    } else {
+      setDeckMan(currentDeck.slice(1));
+    }
     setCardState('revealed');
   };
 
@@ -67,7 +70,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const handleReject = () => {
     setPlayers(prev => ({
       ...prev,
-      [currentPlayer]: { ...prev[currentPlayer], rejected: prev[currentPlayer].rejected + 1, score: prev[currentPlayer].score - 5 } // Penalty for reject
+      [currentPlayer]: { ...prev[currentPlayer], rejected: prev[currentPlayer].rejected + 1, score: prev[currentPlayer].score - 5 }
     }));
     switchTurn();
   };
@@ -90,11 +93,26 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     switchTurn();
   };
 
-  const switchTurn = () => {
+  const switchTurn = (forceSwitch = false) => {
     setCurrentCard(null);
     setCardState('hidden');
-    setCurrentPlayer(opponent);
-    if (deck.length === 0) onFinish();
+    
+    const nextPlayer = opponent;
+    const nextDeck = nextPlayer === 'woman' ? deckWoman : deckMan;
+    const currentDeck = currentPlayer === 'woman' ? deckWoman : deckMan;
+    
+    if (deckWoman.length === 0 && deckMan.length === 0) {
+      onFinish();
+      return;
+    }
+    
+    // Eğer sıradaki oyuncunun destesi bittiyse, ama diğerinin bitmediyse diğerine geçmeye devam et
+    if (nextDeck.length === 0 && currentDeck.length > (forceSwitch ? 0 : 1)) {
+       // Sırayı değiştirme, aynı oyuncu devam etsin
+       return;
+    }
+
+    setCurrentPlayer(nextPlayer);
   };
 
   return (

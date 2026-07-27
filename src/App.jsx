@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Home from './components/Home.jsx';
 import Settings from './components/Settings.jsx';
 import NameEntry from './components/NameEntry.jsx';
@@ -8,27 +8,37 @@ import GameOver from './components/GameOver.jsx';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('home');
-  const [settings, setSettings] = useState({
-    deckSize: 24,
-    categories: {
-      erotik: true,
-      igrenc: true,
-      zor: true,
-      mini: true,
-      sureli: true,
-      sayili: true,
-      ortak: true,
-      cift: true,
-      tekli: true
-    },
-    disabledTasks: [],
-    disabledJokers: [],
-    disabledQuestions: [],
-    disabledPenalties: [],
-    duration: 60,
-    jokerCount: 3,
-    penaltyCards: true
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('hotgameSettings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      deckSize: 24,
+      categories: {
+        erotik: true,
+        igrenc: true,
+        zor: true,
+        mini: true,
+        sureli: true,
+        sayili: true,
+        ortak: true,
+        cift: true,
+        tekli: true
+      },
+      disabledTasks: [],
+      disabledJokers: [],
+      disabledQuestions: [],
+      disabledPenalties: [],
+      duration: 60,
+      jokerCount: 3,
+      penaltyCards: true
+    };
   });
+  
+  useEffect(() => {
+    localStorage.setItem('hotgameSettings', JSON.stringify(settings));
+  }, [settings]);
   
   const [players, setPlayers] = useState({
     woman: { name: 'Oyuncu 1', score: 0, completed: 0, rejected: 0, jokers: settings.jokerCount, timeRemaining: settings.duration * 60 },
