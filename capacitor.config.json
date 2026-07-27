@@ -1,5 +1,6 @@
 {
-  "appId": "com.sirket.oyunadi",
-  "appName": "Oyunun Adin",
-  "webDir": "dist"
+  "appId": "com.sineartmedia.hotgame",
+  "appName": "Yanmayalim Mi",
+  "webDir": "dist",
+  "plugins": {}
 }
