@@ -24,7 +24,8 @@ function App() {
         sayili: true,
         ortak: true,
         cift: true,
-        tekli: true
+        tekli: true,
+        soru: true
       },
       disabledTasks: [],
       disabledJokers: [],
