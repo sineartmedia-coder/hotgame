@@ -17,51 +17,53 @@ const CATEGORY_NAMES = {
 // Küçük dekoratif deste bileşeni (footer için)
 const MiniDeck = ({ count, color, icon, label, onClick }) => (
   <motion.div
-    whileHover={count > 0 ? { y: -5 } : {}}
+    whileHover={count > 0 ? { y: -8, scale: 1.05 } : {}}
     onClick={count > 0 && onClick ? onClick : undefined}
     style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
       cursor: count > 0 && onClick ? 'pointer' : 'default'
     }}
   >
-    <div style={{ position: 'relative', width: '50px', height: '70px' }}>
+    <div style={{ position: 'relative', width: '70px', height: '100px' }}>
       {/* Stack illüzyonu */}
       {count > 1 && (
         <div style={{
-          position: 'absolute', top: 0, left: '-5px', width: '50px', height: '70px',
-          background: `${color}55`, border: `1.5px solid ${color}88`,
-          borderRadius: '8px', transform: 'rotate(-5deg)'
+          position: 'absolute', top: 0, left: '-7px', width: '70px', height: '100px',
+          background: `${color}55`, border: `2px solid ${color}88`,
+          borderRadius: '12px', transform: 'rotate(-6deg)'
         }} />
       )}
       {count > 2 && (
         <div style={{
-          position: 'absolute', top: 0, left: '5px', width: '50px', height: '70px',
-          background: `${color}44`, border: `1.5px solid ${color}66`,
-          borderRadius: '8px', transform: 'rotate(4deg)'
+          position: 'absolute', top: 0, left: '7px', width: '70px', height: '100px',
+          background: `${color}44`, border: `2px solid ${color}66`,
+          borderRadius: '12px', transform: 'rotate(5deg)'
         }} />
       )}
       {/* Ana kart */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, width: '50px', height: '70px',
-        background: `linear-gradient(135deg, ${color}33, ${color}55)`,
-        border: `2px solid ${color}`,
-        borderRadius: '8px',
+        position: 'absolute', top: 0, left: 0, width: '70px', height: '100px',
+        background: `linear-gradient(135deg, ${color}33, ${color}66)`,
+        border: `2.5px solid ${color}`,
+        borderRadius: '12px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        boxShadow: `0 5px 15px ${color}40`
+        boxShadow: `0 8px 20px ${color}50`
       }}>
-        <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+        <span style={{ fontSize: '1.8rem' }}>{icon}</span>
+        <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: '900', marginTop: '4px', opacity: 0.8 }}>{count > 0 ? `${count} ADET` : 'BOŞ'}</span>
         {count > 0 && (
           <div style={{
-            position: 'absolute', top: '-8px', right: '-8px',
+            position: 'absolute', top: '-10px', right: '-10px',
             background: color, color: 'white',
-            width: '22px', height: '22px', borderRadius: '50%',
+            width: '26px', height: '26px', borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.7rem', fontWeight: '900', boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+            fontSize: '0.8rem', fontWeight: '900', boxShadow: '0 3px 10px rgba(0,0,0,0.5)',
+            border: '2px solid white'
           }}>{count}</div>
         )}
       </div>
     </div>
-    <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold', textAlign: 'center' }}>{label}</span>
+    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', fontWeight: '900', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</span>
   </motion.div>
 );
 
@@ -430,8 +432,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       {/* === FOOTER === */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
-        padding: '16px 20px', background: 'rgba(0,0,0,0.35)', borderRadius: '24px',
-        backdropFilter: 'blur(12px)', zIndex: 10, marginTop: '10px'
+        padding: '20px 24px 24px', background: 'rgba(0,0,0,0.4)', borderRadius: '28px',
+        backdropFilter: 'blur(16px)', zIndex: 10, marginTop: '14px',
+        border: '1px solid rgba(255,255,255,0.1)'
       }}>
         {/* Reddedilenler (sol) */}
         <MiniDeck
@@ -442,37 +445,39 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         />
 
         {/* Jokerler (orta) */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
             {[...Array(settings.jokerCount)].map((_, i) => {
               const isActive = i < players[currentPlayer].jokers;
               return (
                 <motion.div
                   key={i}
-                  whileHover={isActive ? { y: -8, scale: 1.1 } : {}}
+                  whileHover={isActive ? { y: -12, scale: 1.15 } : {}}
                   whileTap={isActive ? { scale: 0.9 } : {}}
                   onClick={isActive ? () => setShowJokerModal(true) : undefined}
                   style={{
-                    width: '38px', height: '56px',
+                    width: '52px', height: '76px',
                     background: isActive
                       ? `linear-gradient(135deg, #f5af19, #f12711)`
-                      : 'rgba(255,255,255,0.1)',
-                    border: isActive ? '2px solid #fff' : '2px solid rgba(255,255,255,0.2)',
-                    borderRadius: '8px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.3rem',
+                      : 'rgba(255,255,255,0.08)',
+                    border: isActive ? '2.5px solid #fff' : '2px solid rgba(255,255,255,0.15)',
+                    borderRadius: '12px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: '4px',
+                    fontSize: '1.7rem',
                     cursor: isActive ? 'pointer' : 'default',
-                    boxShadow: isActive ? '0 5px 15px rgba(245,175,25,0.5)' : 'none',
+                    boxShadow: isActive ? '0 8px 20px rgba(245,175,25,0.6), 0 0 0 1px rgba(255,255,255,0.2)' : 'none',
                     transition: 'all 0.3s',
-                    filter: isActive ? 'none' : 'grayscale(1) opacity(0.3)'
+                    filter: isActive ? 'none' : 'grayscale(1) opacity(0.25)'
                   }}
                 >
                   🃏
+                  {isActive && <span style={{ fontSize: '0.6rem', color: 'white', fontWeight: '900', opacity: 0.9 }}>KULLAN</span>}
                 </motion.div>
               );
             })}
           </div>
-          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold' }}>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
             JOKER ({players[currentPlayer].jokers}/{settings.jokerCount})
           </span>
         </div>
