@@ -77,7 +77,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       if (settings.disabledTasks.includes(card.id)) return false;
       return true;
     });
-    return enabledCards.sort(() => Math.random() - 0.5);
+    const shuffled = enabledCards.sort(() => Math.random() - 0.5);
+    // deckSize: kaç kart çekileceği (0 veya tanımsız ise tümü)
+    const limit = settings.deckSize && settings.deckSize > 0 ? settings.deckSize : shuffled.length;
+    return shuffled.slice(0, limit);
   };
 
   const [deckWoman, setDeckWoman] = useState(() => createDeck('woman'));
