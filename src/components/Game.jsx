@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_CARDS } from '../data/cards';
-import { buildBalancedDeck } from '../utils/deckBuilder';
-import ReviewScreen from './TaskFlows/ReviewScreen';
-import TimedReviewScreen from './TaskFlows/TimedReviewScreen';
-import DiceScreen from './TaskFlows/DiceScreen';
+import { MOCK_CARDS, MOCK_PENALTIES } from '../data/cards';
 
 const CATEGORY_NAMES = {
   erotik: 'Erotik', igrenc: 'İğrenç', zor: 'Zor',
@@ -12,6 +8,7 @@ const CATEGORY_NAMES = {
   mini: 'Mini Oyun', cift: 'Çift', tekli: 'Tekli', soru: 'Soru'
 };
 
+// ─── Mini deste bileşeni (footer için) ───────────────────────────────────────
 const MiniDeck = ({ count, color, icon, label }) => (
   <motion.div
     whileHover={count > 0 ? { y: -8, scale: 1.05 } : {}}
@@ -46,23 +43,30 @@ const MiniDeck = ({ count, color, icon, label }) => (
   </motion.div>
 );
 
+// ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [currentPlayer, setCurrentPlayer] = useState(startingPlayer);
 
-  // Desteleri oluştur (yeni algoritmamızla)
-  const [deckWoman, setDeckWoman] = useState(() => buildBalancedDeck(MOCK_CARDS, 'woman', settings.deckSize, settings.categories, settings.disabledTasks));
-  const [deckMan, setDeckMan] = useState(() => buildBalancedDeck(MOCK_CARDS, 'man', settings.deckSize, settings.categories, settings.disabledTasks));
-  
+  const createDeck = (targetGender) => {
+    const enabled = MOCK_CARDS.filter(card => {
+      if (card.target !== targetGender) return false;
+      if (!settings.categories[card.category]) return false;
+      if (settings.disabledTasks.includes(card.id)) return false;
+      return true;
+    }).sort(() => Math.random() - 0.5);
+    const limit = settings.deckSize > 0 ? settings.deckSize : enabled.length;
+    return enabled.slice(0, limit);
+  };
+
+  const [deckWoman, setDeckWoman] = useState(() => createDeck('woman'));
+  const [deckMan,   setDeckMan]   = useState(() => createDeck('man'));
   const [currentCard, setCurrentCard] = useState(null);
-  
-  // hidden | revealed | rolling | ready | executing | reviewing | timedReviewing | rejectWho | resolving
+  // hidden | revealed | executing | reviewing | rejectWho | resolving
   const [cardState, setCardState] = useState('hidden');
-  const [resolveDir, setResolveDir] = useState(null);
+  const [resolveDir, setResolveDir] = useState(null); // 'reject'|'complete'|'joker'
   const [showJokerModal, setShowJokerModal] = useState(false);
-  const [jokerNotice, setJokerNotice] = useState(null);
-  
-  const [targetCount, setTargetCount] = useState(null);
-  const [taskTimeRemaining, setTaskTimeRemaining] = useState(null);
+  // Joker bildirim banner'ı
+  const [jokerNotice, setJokerNotice] = useState(null); // { player, name }
 
   const opponent = currentPlayer === 'woman' ? 'man' : 'woman';
   const activeColor = currentPlayer === 'woman' ? '#9d4edd' : '#ff7900';
@@ -72,11 +76,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     : `radial-gradient(circle at top, ${activeGlow} 0%, #4a2100 100%)`;
 
   const isQuestion = currentCard?.category === 'soru';
-  const isCoop = currentCard?.taskType === 'coop';
-  const isTimed = currentCard?.taskType === 'timed' || currentCard?.taskType === 'timed+counted';
-  const isCounted = currentCard?.taskType === 'counted' || currentCard?.taskType === 'timed+counted';
 
-  // Oyun Genel Süresi (Zaman Bonusu için) - sadece görev yaparken çalışır
+  // Sayaç – sadece 'executing' aşamasında çalışır
   useEffect(() => {
     if (settings.duration <= 0 || cardState !== 'executing') return;
     const iv = setInterval(() => {
@@ -89,20 +90,6 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     return () => clearInterval(iv);
   }, [currentPlayer, settings.duration, cardState, setPlayers]);
 
-  // Görev Süresi (Kart üzerindeki süre)
-  useEffect(() => {
-    if (cardState !== 'executing' || taskTimeRemaining === null) return;
-    if (taskTimeRemaining <= 0) {
-      // Süre bitti!
-      setCardState('timedReviewing');
-      return;
-    }
-    const iv = setInterval(() => {
-      setTaskTimeRemaining(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [cardState, taskTimeRemaining]);
-
   const fmt = s => s <= 0 ? '0:00' : `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
 
   const drawCard = () => {
@@ -110,142 +97,67 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     if (!deck.length) { doSwitch(true); return; }
     const card = deck[0];
     setCurrentCard(card);
-    setTargetCount(null);
-    setTaskTimeRemaining(card.duration || null);
-
     if (currentPlayer === 'woman') setDeckWoman(deck.slice(1));
     else setDeckMan(deck.slice(1));
-    
     setCardState('revealed');
   };
 
-  const handleRollDice = () => setCardState('rolling');
-  
-  const handleRollComplete = (result) => {
-    setTargetCount(result);
-    setCardState('ready'); // Zardan sonra hazır
-  };
-
-  const handleAccept = () => {
-    if (isCounted && !targetCount) {
-      handleRollDice();
-    } else {
-      setCardState('executing');
-    }
-  };
-
+  const handleAccept = () => setCardState('executing');
   const handleRejectClick = () => setCardState('rejectWho');
 
   const handleRejectWho = (who) => {
     const target = who === 'self' ? currentPlayer : opponent;
     setPlayers(prev => ({
       ...prev,
-      [target]: { ...prev[target], rejected: prev[target].rejected + 1, score: prev[target].score - Math.floor(currentCard.points * 0.5) }
+      [target]: { ...prev[target], rejected: prev[target].rejected + 1, score: prev[target].score - 5 }
     }));
     fly('reject');
   };
 
+  // Soru kartı: doğrudan cevap butonu
   const handleAnswer = (answered) => {
     if (answered) {
-      addPoints(currentPlayer, currentCard.points);
+      setPlayers(prev => ({
+        ...prev,
+        [currentPlayer]: { ...prev[currentPlayer], completed: prev[currentPlayer].completed + 1, score: prev[currentPlayer].score + currentCard.points }
+      }));
       fly('complete');
     } else {
-      addPoints(currentPlayer, -Math.floor(currentCard.points * 0.5), false);
       fly('reject');
     }
   };
 
-  const handleTaskComplete = () => {
-    if (isTimed) {
-      // Erken bitirdi -> ekstra puan kazanacak
-      const timeLeft = taskTimeRemaining || 0;
-      const totalTime = currentCard.duration || 1;
-      const bonus = Math.floor((timeLeft / totalTime) * currentCard.points * 0.3);
+  const handleComplete = () => setCardState('reviewing');
+
+  const submitReview = (approved) => {
+    if (approved) {
       setPlayers(prev => ({
         ...prev,
-        [currentPlayer]: { ...prev[currentPlayer], earlyBonus: (prev[currentPlayer].earlyBonus || 0) + bonus, score: prev[currentPlayer].score + bonus }
+        [currentPlayer]: { ...prev[currentPlayer], completed: prev[currentPlayer].completed + 1, score: prev[currentPlayer].score + currentCard.points + 2 }
       }));
+      fly('complete');
+    } else {
+      fly('reject');
     }
-    setCardState('reviewing');
-  };
-
-  const addPoints = (player, pts, isComplete = true) => {
-    setPlayers(prev => ({
-      ...prev,
-      [player]: { 
-        ...prev[player], 
-        score: prev[player].score + pts,
-        completed: isComplete ? prev[player].completed + 1 : prev[player].completed,
-        rejected: !isComplete ? prev[player].rejected + 1 : prev[player].rejected,
-      }
-    }));
-  };
-
-  const submitReview = (extraPts) => {
-    // extraPts: opponent tarafından verilen bonus
-    const basePts = currentCard.points;
-    addPoints(currentPlayer, basePts + extraPts);
-    if (extraPts > 0) {
-      setPlayers(prev => ({
-        ...prev,
-        [currentPlayer]: { ...prev[currentPlayer], performanceScore: (prev[currentPlayer].performanceScore || 0) + extraPts }
-      }));
-    }
-    if (isCoop) {
-      addPoints(opponent, Math.floor(basePts / 2)); // Ortak görev bonusu
-    }
-    fly('complete');
-  };
-
-  const rejectReview = () => {
-    const penalty = Math.floor(currentCard.points * 0.5);
-    addPoints(currentPlayer, -penalty, false);
-    if (isCoop) {
-      addPoints(opponent, -penalty, false);
-    }
-    fly('reject');
-  };
-
-  const handleTimedPartial = (completedAmount) => {
-    if (!currentCard.points) return;
-    // Kısmi puan = (yapılan / hedef) * max puan
-    const ratio = completedAmount / (targetCount || 1);
-    const pts = Math.floor(ratio * currentCard.points);
-    addPoints(currentPlayer, pts); // Kısmen yaptı sayılır
-    fly('complete');
-  };
-
-  const handleTimedReject = () => {
-    rejectReview(); // Hiç yapamadı
-  };
-
-  const handleTimedApprove = (extraPts) => {
-    submitReview(extraPts); // Tam yaptı
   };
 
   const fly = (dir) => {
     setResolveDir(dir);
     setCardState('resolving');
-    setTimeout(() => { 
-      setCardState('hidden'); 
-      setCurrentCard(null); 
-      setResolveDir(null); 
-      setTargetCount(null);
-      setTaskTimeRemaining(null);
-      doSwitch(); 
-    }, 700);
+    setTimeout(() => { setCardState('hidden'); setCurrentCard(null); setResolveDir(null); doSwitch(); }, 700);
   };
 
-  const handleUseJoker = (jokerType) => {
-    // Burada joker etkilerini state'e yansıtabiliriz, şu anlık pas geçiyor
+  const handleUseJoker = () => {
     if (players[currentPlayer].jokers <= 0) return;
     setPlayers(prev => ({
       ...prev,
       [currentPlayer]: { ...prev[currentPlayer], jokers: prev[currentPlayer].jokers - 1 }
     }));
+    // Joker bildirimini kaydet
     setJokerNotice({ player: currentPlayer, name: players[currentPlayer].name, avatar: players[currentPlayer].avatar });
     setShowJokerModal(false);
     fly('joker');
+    // Bildirim 4 saniye sonra kalksın
     setTimeout(() => setJokerNotice(null), 4000);
   };
 
@@ -302,7 +214,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       <motion.div animate={{ y: [0,30,0], rotate: [0,-15,15,0] }} transition={{ duration: 7, repeat: Infinity }}
         style={{ position: 'absolute', bottom: '22%', right: '8%', fontSize: '3.5rem', opacity: 0.12, pointerEvents: 'none' }}>😈</motion.div>
 
-      {/* Joker Banner */}
+      {/* ── Joker Bildirim Banneri ────────────────────────────────────────── */}
       <AnimatePresence>
         {jokerNotice && (
           <motion.div
@@ -329,7 +241,6 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         >
           {players[currentPlayer].avatar} {players[currentPlayer].name}
         </motion.h2>
-        
         {settings.duration > 0 && (
           <div style={{
             color: cardState === 'executing' && players[currentPlayer].timeRemaining < 30 ? '#ff4444' : 'white',
@@ -337,7 +248,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             background: 'rgba(0,0,0,0.4)', padding: '5px 16px', borderRadius: '20px',
             border: `1px solid ${activeColor}`, backdropFilter: 'blur(10px)', transition: 'color 0.3s'
           }}>
-            ⏱️ {fmt(players[currentPlayer].timeRemaining)} (Oyun Süresi)
+            ⏱️ {fmt(players[currentPlayer].timeRemaining)}
+            {cardState === 'executing' ? ' — Sayıyor!' : ' — Bekliyor'}
           </div>
         )}
       </div>
@@ -346,6 +258,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
         <AnimatePresence mode="wait">
 
+          {/* Deste */}
           {cardState === 'hidden' && (
             <motion.div key="deck"
               initial={{ scale: 0.8, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -359,17 +272,18 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <span style={{ fontSize: '3.5rem', filter: `drop-shadow(0 0 10px ${activeColor})`, marginBottom: '8px' }}>🔥</span>
                   <h3 style={{ color: 'white', fontSize: '1.2rem', fontWeight: '900', letterSpacing: '2px', margin: 0, textShadow: `0 0 10px ${activeColor}`, textAlign: 'center' }}>GÖREV KARTI</h3>
-                  <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: activeColor, color: 'white', padding: '6px 12px', borderRadius: '16px', fontWeight: '900', fontSize: '0.85rem', border: '2px solid rgba(255,255,255,0.2)' }}>{deckLen} KART</div>
+                  <div style={{
+                    position: 'absolute', bottom: '16px', right: '16px',
+                    background: activeColor, color: 'white', padding: '6px 12px', borderRadius: '16px',
+                    fontWeight: '900', fontSize: '0.85rem', border: '2px solid rgba(255,255,255,0.2)'
+                  }}>{deckLen} KART</div>
                 </div>
               </CardBack>
             </motion.div>
           )}
 
-          {cardState === 'rolling' && (
-            <DiceScreen key="dice" onRollComplete={handleRollComplete} activeColor={activeColor} />
-          )}
-
-          {(cardState === 'revealed' || cardState === 'ready' || cardState === 'executing' || cardState === 'rejectWho') && currentCard && (
+          {/* Kart Açık */}
+          {(cardState === 'revealed' || cardState === 'executing' || cardState === 'rejectWho') && currentCard && (
             <motion.div key="card-open"
               initial={{ scale: 0.8, opacity: 0, rotateY: -90 }} animate={{ scale: 1, opacity: 1, rotateY: 0 }}
               style={{
@@ -380,51 +294,26 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '2px solid #f0f0f0', paddingBottom: '12px' }}>
                 <span style={{ fontWeight: '900', textTransform: 'uppercase', color: activeColor, fontSize: '0.85rem' }}>
-                  {isCoop ? '🤝 ORTAK GÖREV' : (CATEGORY_NAMES[currentCard.category] || currentCard.category)}
+                  {CATEGORY_NAMES[currentCard.category] || currentCard.category}
                 </span>
                 <span style={{ fontWeight: '900', color: '#555', fontSize: '0.85rem' }}>{currentCard.points} PUAN</span>
               </div>
-              
               {currentCard.title && <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: '#111', marginBottom: '12px' }}>{currentCard.title}</h2>}
               <p style={{ fontSize: '1.1rem', textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', lineHeight: 1.6 }}>
                 {currentCard.text}
               </p>
 
-              {/* Ekstra Bilgiler (Hedef ve Süre) */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
-                {targetCount && (
-                  <div style={{ background: activeColor, color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                    🎯 Hedef: {targetCount} kere
-                  </div>
-                )}
-                {isTimed && cardState !== 'executing' && (
-                  <div style={{ background: '#2b9348', color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                    ⏱️ {fmt(currentCard.duration)} Süre
-                  </div>
-                )}
-              </div>
-
-              {/* ── Görev İcracısı ── */}
-              {cardState === 'executing' && isTimed && (
-                <div style={{ margin: '20px 0', textAlign: 'center', padding: '16px', background: '#ffebee', borderRadius: '16px', border: '2px solid #ff4444' }}>
-                  <p style={{ margin: 0, fontWeight: 'bold', color: '#ff4444' }}>KALAN SÜRE</p>
-                  <h1 style={{ fontSize: '3rem', margin: '5px 0', color: '#ff4444' }}>{fmt(taskTimeRemaining)}</h1>
-                </div>
-              )}
-
-              {/* ── Revealed / Ready butonları ── */}
-              {(cardState === 'revealed' || cardState === 'ready') && !isQuestion && (
+              {/* ── Revealed butonları ── */}
+              {cardState === 'revealed' && !isQuestion && (
                 <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                   <motion.button whileTap={{ scale: 0.95 }} onClick={handleRejectClick}
                     style={{ flex: 1, padding: '14px', background: '#d00000', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>❌ REDDET</motion.button>
                   <motion.button whileTap={{ scale: 0.95 }} onClick={handleAccept}
-                    style={{ flex: 1, padding: '14px', background: '#2b9348', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
-                    {isCounted && !targetCount ? '🎲 ZAR AT' : '✅ BAŞLA'}
-                  </motion.button>
+                    style={{ flex: 1, padding: '14px', background: '#2b9348', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>✅ KABUL</motion.button>
                 </div>
               )}
 
-              {/* ── Soru kartı butonları ── */}
+              {/* ── Soru kartı revealed butonları ── */}
               {cardState === 'revealed' && isQuestion && (
                 <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexDirection: 'column' }}>
                   <p style={{ textAlign: 'center', color: '#888', fontSize: '0.9rem', margin: 0 }}>Soruyu cevapladın mı?</p>
@@ -457,7 +346,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
 
               {/* ── Görevi bitirdim ── */}
               {cardState === 'executing' && !isQuestion && (
-                <motion.button whileTap={{ scale: 0.95 }} onClick={handleTaskComplete}
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleComplete}
                   style={{ marginTop: '24px', width: '100%', padding: '16px', background: activeColor, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.05rem', cursor: 'pointer' }}>
                   ✅ GÖREVİ BİTİRDİM
                 </motion.button>
@@ -485,32 +374,31 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             </motion.div>
           )}
 
-          {/* İnceleme (Normal Onay) */}
+          {/* İnceleme */}
           {cardState === 'reviewing' && (
-            <ReviewScreen 
-              key="review" 
-              card={currentCard} 
-              player={players[currentPlayer]} 
-              opponent={players[opponent]} 
-              activeColor={activeColor}
-              onApprove={submitReview}
-              onReject={rejectReview}
-            />
-          )}
-
-          {/* İnceleme (Süre Bittiğinde) */}
-          {cardState === 'timedReviewing' && (
-            <TimedReviewScreen
-              key="timedReview"
-              card={currentCard}
-              player={players[currentPlayer]}
-              opponent={players[opponent]}
-              activeColor={activeColor}
-              targetCount={targetCount}
-              onApprove={handleTimedApprove}
-              onPartial={handleTimedPartial}
-              onReject={handleTimedReject}
-            />
+            <motion.div key="review"
+              initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              style={{
+                background: 'rgba(255,255,255,0.97)', padding: '36px', borderRadius: '28px',
+                width: '90%', maxWidth: '380px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                border: `4px solid ${activeColor}`, textAlign: 'center'
+              }}
+            >
+              <h3 style={{ color: opponent === 'woman' ? '#9d4edd' : '#ff7900', marginBottom: '16px', fontSize: '1.4rem', fontWeight: '900' }}>
+                {players[opponent].avatar} {players[opponent].name} Onayı
+              </h3>
+              <p style={{ marginBottom: '28px', fontSize: '1.1rem', color: '#333', fontWeight: 'bold' }}>Görev başarıyla tamamlandı mı?</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => submitReview(true)}
+                  style={{ padding: '16px', background: '#2b9348', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '1.05rem', cursor: 'pointer' }}>
+                  ✅ EVET — Tamamladı!
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => submitReview(false)}
+                  style={{ padding: '16px', background: '#d00000', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '1.05rem', cursor: 'pointer' }}>
+                  ❌ HAYIR — Tamamlayamadı
+                </motion.button>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_PENALTIES } from '../data/cards';
 
+// 9 ceza kartını 3x3 grid'de gösterir, tıklanınca açılır
 const PenaltyGrid = ({ onClose }) => {
   const [flipped, setFlipped] = useState({});
   const penalties = MOCK_PENALTIES.slice(0, 9);
@@ -94,16 +95,13 @@ const PenaltyGrid = ({ onClose }) => {
   );
 };
 
+// ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 const GameOver = ({ players, onRestart }) => {
   const [showPenalties, setShowPenalties] = useState(false);
 
-  const timeBonus = (p) => p.timeRemaining > 0 ? Math.floor(p.timeRemaining / 60) * 2 : 0;
-  const jokerBonus = (p) => p.jokers * 5;
-
-  const getFinalScore = (p) => p.score + timeBonus(p) + jokerBonus(p);
-
-  const wScore = getFinalScore(players.woman);
-  const mScore = getFinalScore(players.man);
+  const bonus = (p) => p.timeRemaining > 0 ? Math.floor(p.timeRemaining / 60) * 2 : 0;
+  const wScore = players.woman.score + bonus(players.woman);
+  const mScore = players.man.score   + bonus(players.man);
   const winner = wScore > mScore ? 'woman' : wScore < mScore ? 'man' : 'tie';
 
   const fmt = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
@@ -174,44 +172,13 @@ const GameOver = ({ players, onRestart }) => {
                 <p style={{ fontSize: '1.5rem', margin: '0 0 4px' }}>{pl.avatar}</p>
                 <h3 style={{ color: col, fontWeight: '900', fontSize: '1.1rem', margin: '0 0 10px' }}>{pl.name}</h3>
                 <div style={{ fontSize: '2.4rem', fontWeight: '900', color: 'white' }}>{score}</div>
-                <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '4px' }}>Toplam Puan</div>
-                
+                <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '4px' }}>puan</div>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '12px 0' }} />
-                
-                <div style={{ fontSize: '0.75rem', color: '#ccc', display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left', paddingLeft: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>✅ Görev Puanı</span>
-                    <strong>{pl.score - (pl.performanceScore || 0) - (pl.earlyBonus || 0)}</strong>
-                  </div>
-                  {(pl.performanceScore > 0) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4ade80' }}>
-                      <span>⭐ Performans</span>
-                      <strong>+{pl.performanceScore}</strong>
-                    </div>
-                  )}
-                  {(pl.earlyBonus > 0) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4ade80' }}>
-                      <span>⚡ Hızlı Bitirme</span>
-                      <strong>+{pl.earlyBonus}</strong>
-                    </div>
-                  )}
-                  {timeBonus(pl) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#60a5fa' }}>
-                      <span>⏱️ Oyun Süresi</span>
-                      <strong>+{timeBonus(pl)}</strong>
-                    </div>
-                  )}
-                  {jokerBonus(pl) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#facc15' }}>
-                      <span>🃏 Kalan Joker ({pl.jokers})</span>
-                      <strong>+{jokerBonus(pl)}</strong>
-                    </div>
-                  )}
-                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Tamamlanan / Red</span>
-                    <strong>{pl.completed} / {pl.rejected}</strong>
-                  </div>
+                <div style={{ fontSize: '0.8rem', color: '#ccc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span>✅ {pl.completed} Tamamlandı</span>
+                  <span>❌ {pl.rejected} Reddedildi</span>
+                  <span>⏱️ {fmt(pl.timeRemaining)} Kaldı</span>
+                  {bonus(pl) > 0 && <span style={{ color: '#f5af19' }}>+{bonus(pl)} Süre Bonusu</span>}
                 </div>
               </motion.div>
             );

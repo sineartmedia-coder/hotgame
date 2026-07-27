@@ -42,8 +42,8 @@ function App() {
   }, [settings]);
   
   const [players, setPlayers] = useState({
-    woman: { name: '', avatar: '👩', score: 0, performanceScore: 0, earlyBonus: 0, completed: 0, rejected: 0, jokers: settings.jokerCount, timeRemaining: settings.duration * 60 },
-    man: { name: '', avatar: '👱‍♂️', score: 0, performanceScore: 0, earlyBonus: 0, completed: 0, rejected: 0, jokers: settings.jokerCount, timeRemaining: settings.duration * 60 }
+    woman: { name: 'Oyuncu 1', score: 0, completed: 0, rejected: 0, jokers: settings.jokerCount, timeRemaining: settings.duration * 60, avatar: '💋' },
+    man: { name: 'Oyuncu 2', score: 0, completed: 0, rejected: 0, jokers: settings.jokerCount, timeRemaining: settings.duration * 60, avatar: '🍆' }
   });
   
   const [startingPlayer, setStartingPlayer] = useState(null);
