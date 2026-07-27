@@ -1,17 +1,17 @@
 export const MOCK_CARDS = [
   {
     id: 1,
-    type: 'erotik',
-    isExtreme: false,
+    category: 'erotik',
+    title: 'Boyun Öpücüğü',
     text: 'Partnerinin boynundan öperek aşağı in.',
     points: 10,
-    duration: 0, // 0 = süresiz
+    duration: 0,
     isCountable: false,
   },
   {
     id: 2,
-    type: 'erotik',
-    isExtreme: true,
+    category: 'erotik',
+    title: 'Kucak Dansı',
     text: 'Partnerine kucak dansı yap.',
     points: 20,
     duration: 60,
@@ -19,8 +19,8 @@ export const MOCK_CARDS = [
   },
   {
     id: 3,
-    type: 'igrenc',
-    isExtreme: false,
+    category: 'igrenc',
+    title: 'Ayak Fantezisi',
     text: 'Partnerinin ayak parmağını yala.',
     points: 15,
     duration: 0,
@@ -28,8 +28,8 @@ export const MOCK_CARDS = [
   },
   {
     id: 4,
-    type: 'zor',
-    isExtreme: false,
+    category: 'zor',
+    title: 'Akrobat',
     text: 'Amuda kalkmayı dene.',
     points: 10,
     duration: 0,
@@ -37,8 +37,8 @@ export const MOCK_CARDS = [
   },
   {
     id: 5,
-    type: 'sureli',
-    isExtreme: false,
+    category: 'sureli',
+    title: 'Göz Teması',
     text: 'Partnerinle göz temasını bozmadan 1 dakika bekle.',
     points: 5,
     duration: 60,
@@ -46,20 +46,21 @@ export const MOCK_CARDS = [
   },
   {
     id: 6,
-    type: 'sayili',
-    isExtreme: false,
+    category: 'sayili',
+    title: 'Şınav Şov',
     text: 'Şınav çek.',
-    points: 15, // taban puan
+    points: 15,
     duration: 0,
     isCountable: true,
   },
   {
     id: 7,
-    type: 'ortak',
-    isExtreme: false,
+    category: 'ortak',
+    title: 'Müzik Ziyafeti',
     text: 'Beraber en sevdiğiniz şarkıyı söyleyin.',
     points: 5,
     duration: 0,
     isCountable: false,
   },
 ];
+

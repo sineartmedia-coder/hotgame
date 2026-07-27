@@ -1,16 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_CARDS } from '../data/cards';
 
 const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [currentPlayer, setCurrentPlayer] = useState(startingPlayer);
-  const [deck, setDeck] = useState([...MOCK_CARDS]); // TODO: Shuffle and filter based on settings
+  
+  // Sadece ayarlarda seçilen görevleri içeren bir deste oluştur
+  const [deck, setDeck] = useState(() => {
+    const enabledCards = MOCK_CARDS.filter(card => {
+      // Kategori açık mı?
+      if (!settings.categories[card.category]) return false;
+      // Spesifik görev kapalı mı?
+      if (settings.disabledTasks.includes(card.id)) return false;
+      return true;
+    });
+    // Karıştır
+    return enabledCards.sort(() => Math.random() - 0.5);
+  });
+  
   const [currentCard, setCurrentCard] = useState(null);
   const [cardState, setCardState] = useState('hidden'); // hidden, revealed, executing, reviewing
 
   const activeColor = currentPlayer === 'woman' ? 'var(--color-purple)' : 'var(--color-orange)';
   const activeGlow = currentPlayer === 'woman' ? 'var(--color-purple-glow)' : 'var(--color-orange-glow)';
   const opponent = currentPlayer === 'woman' ? 'man' : 'woman';
+
+  // Sayaç Mantığı
+  useEffect(() => {
+    if (settings.duration <= 0) return;
+    const interval = setInterval(() => {
+      setPlayers(prev => {
+        const current = prev[currentPlayer];
+        if (current.timeRemaining <= 0) {
+          // Süre bittiğinde otomatik red edilebilir veya sadece 0'da kalabilir. Şimdilik 0'da kalsın.
+          return prev;
+        }
+        return {
+          ...prev,
+          [currentPlayer]: { ...current, timeRemaining: current.timeRemaining - 1 }
+        };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [currentPlayer, settings.duration, setPlayers]);
+
+  const formatTime = (seconds) => {
+    if (seconds <= 0) return "0:00";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   const drawCard = () => {
     if (deck.length === 0) {
@@ -68,8 +107,20 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ color: activeColor, fontSize: '1.5rem', fontWeight: 'bold' }}>{players[currentPlayer].name} Sırası</h2>
-        <div className="glass" style={{ padding: '8px 16px', fontSize: '1.2rem', fontWeight: 'bold' }}>
-          Puan: {players[currentPlayer].score}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div className="glass" style={{ padding: '8px 16px', fontSize: '1.2rem', fontWeight: 'bold' }}>
+            Puan: {players[currentPlayer].score}
+          </div>
+          {settings.duration > 0 && (
+            <div style={{ 
+              color: players[currentPlayer].timeRemaining < 60 ? '#ff3333' : '#ffb3d1', 
+              marginTop: '5px', fontSize: '1.2rem', fontWeight: 'bold', 
+              background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
+              border: `1px solid ${players[currentPlayer].timeRemaining < 60 ? '#ff3333' : activeColor}`
+            }}>
+              ⏱️ {formatTime(players[currentPlayer].timeRemaining)}
+            </div>
+          )}
         </div>
       </div>
 
