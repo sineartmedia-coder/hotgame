@@ -2,30 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const DiceFace = ({ number, color }) => {
-  const dots = {
-    1: ['center'],
-    2: ['top-right', 'bottom-left'],
-    3: ['top-right', 'center', 'bottom-left'],
-    4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-    5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
-    6: ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right'],
-  };
-
-  const activeDots = dots[number] || [];
-
-  const getPosition = (pos) => {
-    switch(pos) {
-      case 'center': return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
-      case 'top-left': return { top: '20%', left: '20%', transform: 'translate(-50%, -50%)' };
-      case 'top-right': return { top: '20%', left: '80%', transform: 'translate(-50%, -50%)' };
-      case 'middle-left': return { top: '50%', left: '20%', transform: 'translate(-50%, -50%)' };
-      case 'middle-right': return { top: '50%', left: '80%', transform: 'translate(-50%, -50%)' };
-      case 'bottom-left': return { top: '80%', left: '20%', transform: 'translate(-50%, -50%)' };
-      case 'bottom-right': return { top: '80%', left: '80%', transform: 'translate(-50%, -50%)' };
-      default: return {};
-    }
-  };
-
   return (
     <div style={{
       width: '120px', height: '120px',
@@ -33,19 +9,12 @@ const DiceFace = ({ number, color }) => {
       backdropFilter: 'blur(10px)',
       border: `2px solid ${color}`,
       borderRadius: '24px',
-      position: 'relative',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
       boxShadow: `0 10px 30px ${color}40, inset 0 0 20px rgba(255,255,255,0.1)`,
     }}>
-      {activeDots.map((pos, i) => (
-        <div key={i} style={{
-          position: 'absolute',
-          width: '20px', height: '20px',
-          backgroundColor: 'white',
-          borderRadius: '50%',
-          boxShadow: `0 0 10px ${color}`,
-          ...getPosition(pos)
-        }} />
-      ))}
+      <span style={{ fontSize: '5rem', fontWeight: 'bold', color: 'white', textShadow: `0 0 20px ${color}` }}>
+        {number}
+      </span>
     </div>
   );
 };
@@ -59,7 +28,7 @@ const DiceRoll = ({ players, onFinish }) => {
   const [winner, setWinner] = useState(null); // 'woman' or 'man'
 
   const activeColor = turn === 'woman' ? 'var(--color-purple)' : 'var(--color-orange)';
-  const activeGlow = turn === 'woman' ? 'rgba(157, 78, 221, 0.5)' : 'rgba(255, 121, 0, 0.5)';
+  const activeGlow = turn === 'woman' ? 'rgba(157, 78, 221, 0.4)' : 'rgba(255, 121, 0, 0.4)';
 
   useEffect(() => {
     let interval;
@@ -100,62 +69,69 @@ const DiceRoll = ({ players, onFinish }) => {
   return (
     <div style={{
       minHeight: '100vh', width: '100%',
-      background: `radial-gradient(circle at center, ${activeGlow} 0%, #050010 80%)`,
+      background: `radial-gradient(circle at center, ${activeGlow} 0%, #050010 100%)`,
       transition: 'background 1s ease',
-      display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden'
+      display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
+      padding: '40px 20px'
     }}>
       
       {/* Background Decor */}
-      <motion.div animate={{ rotate: 360 }} transition={{ duration: 60, repeat: Infinity, ease: "linear" }} style={{ position: 'absolute', top: '-20%', left: '-20%', width: '140%', height: '140%', background: `conic-gradient(from 0deg, transparent, ${activeGlow} 10%, transparent 20%, transparent)`, opacity: 0.3 }} />
+      <motion.div animate={{ rotate: 360 }} transition={{ duration: 60, repeat: Infinity, ease: "linear" }} style={{ position: 'absolute', top: '-20%', left: '-20%', width: '140%', height: '140%', background: `conic-gradient(from 0deg, transparent, ${activeGlow} 10%, transparent 20%, transparent)`, opacity: 0.2 }} />
 
-      {/* Top Half - Woman (Purple) */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        opacity: turn === 'woman' || winner === 'woman' ? 1 : 0.4,
-        transition: 'opacity 0.5s'
-      }}>
-        <motion.div animate={turn === 'woman' && !winner ? { y: [0, -10, 0] } : {}} transition={{ duration: 2, repeat: Infinity }}>
-          <h2 style={{ color: 'white', fontSize: '2.5rem', textShadow: '0 0 20px var(--color-purple)' }}>👩 {players.woman.name}</h2>
-        </motion.div>
-        <AnimatePresence>
-          {womanRoll && (
-            <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ marginTop: '20px' }}>
-              <DiceFace number={womanRoll} color="var(--color-purple)" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <h1 style={{ color: 'white', textAlign: 'center', marginBottom: '40px', zIndex: 10, fontSize: '2rem', textShadow: '0 0 20px rgba(255,255,255,0.5)' }}>
+        KİM BAŞLAYACAK?
+      </h1>
 
-      {/* Divider */}
-      <div style={{ width: '100%', height: '2px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)', zIndex: 1 }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', zIndex: 10, marginBottom: 'auto' }}>
+        
+        {/* Kadın Skoru */}
+        <div style={{ 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', 
+          opacity: turn === 'woman' || winner === 'woman' ? 1 : 0.5,
+          transition: 'opacity 0.3s'
+        }}>
+          <h2 style={{ color: 'var(--color-purple)', fontSize: '1.2rem', marginBottom: '10px' }}>👩 {players.woman.name}</h2>
+          <div style={{ 
+            width: '80px', height: '80px', borderRadius: '15px', 
+            background: 'rgba(0,0,0,0.5)', border: '2px solid var(--color-purple)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '2.5rem', color: 'white', fontWeight: 'bold'
+          }}>
+            {womanRoll !== null ? womanRoll : '?'}
+          </div>
+        </div>
 
-      {/* Bottom Half - Man (Orange) */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        opacity: turn === 'man' || winner === 'man' ? 1 : 0.4,
-        transition: 'opacity 0.5s'
-      }}>
-        <AnimatePresence>
-          {manRoll && (
-            <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ marginBottom: '20px' }}>
-              <DiceFace number={manRoll} color="var(--color-orange)" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <motion.div animate={turn === 'man' && !winner ? { y: [0, 10, 0] } : {}} transition={{ duration: 2, repeat: Infinity }}>
-          <h2 style={{ color: 'white', fontSize: '2.5rem', textShadow: '0 0 20px var(--color-orange)' }}>👱‍♂️ {players.man.name}</h2>
-        </motion.div>
+        {/* Erkek Skoru */}
+        <div style={{ 
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          opacity: turn === 'man' || winner === 'man' ? 1 : 0.5,
+          transition: 'opacity 0.3s'
+        }}>
+          <h2 style={{ color: 'var(--color-orange)', fontSize: '1.2rem', marginBottom: '10px' }}>👱‍♂️ {players.man.name}</h2>
+          <div style={{ 
+            width: '80px', height: '80px', borderRadius: '15px', 
+            background: 'rgba(0,0,0,0.5)', border: '2px solid var(--color-orange)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '2.5rem', color: 'white', fontWeight: 'bold'
+          }}>
+            {manRoll !== null ? manRoll : '?'}
+          </div>
+        </div>
+
       </div>
 
       {/* Center Dice Area */}
       <div style={{ 
-        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        flex: 1, zIndex: 10
       }}>
         {!winner ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '40px' }}>
             
+            <h3 style={{ color: 'white', fontSize: '1.5rem', textAlign: 'center' }}>
+              Sıra: <span style={{ color: activeColor }}>{players[turn].name}</span>
+            </h3>
+
             <motion.div
               animate={{ 
                 y: isRolling ? [0, -60, 0] : 0, 
