@@ -22,6 +22,9 @@ function App() {
       tekli: true
     },
     disabledTasks: [],
+    disabledJokers: [],
+    disabledQuestions: [],
+    disabledPenalties: [],
     duration: 60,
     jokerCount: 3,
     penaltyCards: true
