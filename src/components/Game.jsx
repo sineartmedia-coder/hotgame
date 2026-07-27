@@ -33,10 +33,12 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [currentCard, setCurrentCard] = useState(null);
   const [cardState, setCardState] = useState('hidden'); // hidden, revealed, executing, reviewing
 
-  const activeColor = currentPlayer === 'woman' ? '#9d4edd' : '#d00000';
+  const activeColor = currentPlayer === 'woman' ? '#9d4edd' : '#ff7900';
+  const activeGlow = currentPlayer === 'woman' ? 'rgba(157, 78, 221, 0.4)' : 'rgba(255, 121, 0, 0.4)';
+  
   const activeBg = currentPlayer === 'woman' 
-    ? 'linear-gradient(135deg, #ff0844 0%, #ffb199 100%)' 
-    : 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)';
+    ? `radial-gradient(circle at top, ${activeGlow} 0%, #050010 100%)` 
+    : `radial-gradient(circle at top, ${activeGlow} 0%, #050010 100%)`;
     
   const opponent = currentPlayer === 'woman' ? 'man' : 'woman';
 
@@ -128,6 +130,37 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     setCurrentPlayer(nextPlayer);
   };
 
+  const currentDeckLength = currentPlayer === 'woman' ? deckWoman.length : deckMan.length;
+
+  const CardBack = ({ rotation, offsetX, isFront, children }) => (
+    <motion.div 
+      initial={{ rotate: 0, x: 0 }}
+      animate={{ rotate: rotation, x: offsetX }}
+      transition={{ type: 'spring', stiffness: 100, damping: 10 }}
+      style={{
+        width: '100%', height: '100%',
+        position: 'absolute',
+        background: `linear-gradient(135deg, rgba(20,20,20,0.95), rgba(0,0,0,1))`,
+        border: `3px solid ${activeColor}`,
+        borderRadius: '16px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: isFront ? `0 20px 40px ${activeGlow}` : '0 10px 20px rgba(0,0,0,0.5)',
+        zIndex: isFront ? 3 : 1,
+        backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px)`
+      }}
+    >
+      <div style={{ 
+        width: '85%', height: '90%', 
+        border: `2px solid rgba(255,255,255,0.1)`, 
+        borderRadius: '12px', 
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `radial-gradient(circle, ${activeGlow} 0%, transparent 60%)`
+      }}>
+        {children}
+      </div>
+    </motion.div>
+  );
+
   return (
     <div style={{
       minHeight: '100vh', width: '100%',
@@ -138,9 +171,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     }}>
       
       {/* Background Decor */}
-      <motion.div animate={{ y: [0, -30, 0], x: [0, 15, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', top: '10%', left: '5%', fontSize: '4rem', opacity: 0.6 }}>🃏</motion.div>
-      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.6 }}>✨</motion.div>
-      <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity }} style={{ position: 'absolute', top: '40%', right: '5%', fontSize: '3rem' }}>🔥</motion.div>
+      <motion.div animate={{ y: [0, -30, 0], x: [0, 15, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 6, repeat: Infinity }} style={{ position: 'absolute', top: '10%', left: '5%', fontSize: '4rem', opacity: 0.2 }}>♠️</motion.div>
+      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 7, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.2 }}>♥️</motion.div>
 
       {/* Header */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem', zIndex: 10 }}>
@@ -150,7 +182,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
           animate={{ scale: 1, opacity: 1 }}
           style={{ 
             color: 'white', fontSize: '3rem', fontWeight: '900', 
-            textShadow: '0 5px 15px rgba(0,0,0,0.4)', textAlign: 'center',
+            textShadow: `0 5px 20px ${activeColor}`, textAlign: 'center',
             margin: 0
           }}
         >
@@ -160,9 +192,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         {settings.duration > 0 && (
           <div style={{ 
             color: 'white', marginTop: '10px', fontSize: '1.2rem', fontWeight: 'bold', 
-            background: 'rgba(0,0,0,0.3)', padding: '8px 20px', borderRadius: '20px',
-            border: `2px solid white`, backdropFilter: 'blur(10px)',
-            boxShadow: '0 10px 20px rgba(0,0,0,0.2)'
+            background: 'rgba(0,0,0,0.5)', padding: '8px 20px', borderRadius: '20px',
+            border: `1px solid ${activeColor}`, backdropFilter: 'blur(10px)',
+            boxShadow: `0 5px 15px rgba(0,0,0,0.3)`
           }}>
             ⏱️ {formatTime(players[currentPlayer].timeRemaining)}
             {cardState === 'executing' ? ' (Zaman İşliyor)' : ''}
@@ -177,32 +209,38 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
           {cardState === 'hidden' && (
             <motion.div
               key="deck"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 1.2, opacity: 0, rotateY: 90 }}
               onClick={drawCard}
               whileHover={{ y: -10 }}
               whileTap={{ scale: 0.95 }}
               style={{
-                width: '240px', height: '360px',
-                background: 'linear-gradient(135deg, #fff, #f0f0f0)',
-                border: `8px solid white`,
-                borderRadius: '16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: `
-                  -5px 5px 0 rgba(255,255,255,0.8),
-                  -10px 10px 0 rgba(255,255,255,0.6),
-                  -15px 15px 0 rgba(255,255,255,0.4),
-                  0 30px 60px rgba(0,0,0,0.5)
-                `,
+                width: '220px', height: '330px',
                 position: 'relative',
-                backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 10px, transparent 10px, transparent 20px)'
+                cursor: 'pointer'
               }}
             >
-              <h1 style={{ color: activeColor, fontSize: '3rem', fontWeight: '900', textShadow: '0 5px 15px rgba(0,0,0,0.2)' }}>
-                KART ÇEK
-              </h1>
+              {currentDeckLength > 2 && <CardBack rotation={-12} offsetX={-30} isFront={false} />}
+              {currentDeckLength > 1 && <CardBack rotation={-6} offsetX={-15} isFront={false} />}
+              
+              <CardBack rotation={0} offsetX={0} isFront={true}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '4rem', filter: `drop-shadow(0 0 10px ${activeColor})` }}>🔥</span>
+                  
+                  {/* Cards Remaining Badge */}
+                  <div style={{ 
+                    position: 'absolute', bottom: '20px', right: '20px',
+                    background: activeColor, color: 'white',
+                    padding: '8px 16px', borderRadius: '20px',
+                    fontWeight: '900', fontSize: '1rem',
+                    boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
+                    border: '2px solid rgba(255,255,255,0.2)'
+                  }}>
+                    {currentDeckLength} KART
+                  </div>
+                </div>
+              </CardBack>
             </motion.div>
           )}
 
@@ -260,10 +298,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
               style={{ 
                 background: 'rgba(255,255,255,0.95)', padding: '40px', borderRadius: '30px', 
                 width: '90%', maxWidth: '400px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-                border: '4px solid white', textAlign: 'center'
+                border: `4px solid ${activeColor}`, textAlign: 'center'
               }}
             >
-              <h3 style={{ color: opponent === 'woman' ? '#ff0844' : '#f5af19', marginBottom: '20px', fontSize: '1.5rem', fontWeight: '900' }}>
+              <h3 style={{ color: opponent === 'woman' ? '#9d4edd' : '#ff7900', marginBottom: '20px', fontSize: '1.5rem', fontWeight: '900' }}>
                 {players[opponent].name} Onayı
               </h3>
               
