@@ -2,9 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_CARDS } from '../data/cards';
 
+const CATEGORY_NAMES = {
+  erotik: 'Erotik',
+  igrenc: 'İğrenç',
+  zor: 'Zor',
+  sureli: 'Süreli',
+  sayili: 'Sayılı',
+  ortak: 'Ortak',
+  mini: 'Mini Oyun',
+  cift: 'Çift',
+  tekli: 'Tekli'
+};
+
 const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [currentPlayer, setCurrentPlayer] = useState(startingPlayer);
-  // Kadın ve Erkek için ayrı desteler oluştur
+  
   const createDeck = (targetGender) => {
     const enabledCards = MOCK_CARDS.filter(card => {
       if (card.target !== targetGender) return false;
@@ -21,13 +33,16 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [currentCard, setCurrentCard] = useState(null);
   const [cardState, setCardState] = useState('hidden'); // hidden, revealed, executing, reviewing
 
-  const activeColor = currentPlayer === 'woman' ? 'var(--color-purple)' : 'var(--color-orange)';
-  const activeGlow = currentPlayer === 'woman' ? 'var(--color-purple-glow)' : 'var(--color-orange-glow)';
+  const activeColor = currentPlayer === 'woman' ? '#9d4edd' : '#d00000';
+  const activeBg = currentPlayer === 'woman' 
+    ? 'linear-gradient(135deg, #ff0844 0%, #ffb199 100%)' 
+    : 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)';
+    
   const opponent = currentPlayer === 'woman' ? 'man' : 'woman';
 
-  // Sayaç Mantığı
+  // Sadece görev kabul edilip "executing" aşamasına geçildiğinde sayacı çalıştır
   useEffect(() => {
-    if (settings.duration <= 0) return;
+    if (settings.duration <= 0 || cardState !== 'executing') return;
     const interval = setInterval(() => {
       setPlayers(prev => {
         const current = prev[currentPlayer];
@@ -39,7 +54,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [currentPlayer, settings.duration, setPlayers]);
+  }, [currentPlayer, settings.duration, cardState, setPlayers]);
 
   const formatTime = (seconds) => {
     if (seconds <= 0) return "0:00";
@@ -51,7 +66,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const drawCard = () => {
     const currentDeck = currentPlayer === 'woman' ? deckWoman : deckMan;
     if (currentDeck.length === 0) {
-      switchTurn(true); // O anki oyuncunun destesi bittiyse diğerine geç, ikisi de bittiyse bitir
+      switchTurn(true);
       return;
     }
     const card = currentDeck[0];
@@ -106,9 +121,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       return;
     }
     
-    // Eğer sıradaki oyuncunun destesi bittiyse, ama diğerinin bitmediyse diğerine geçmeye devam et
     if (nextDeck.length === 0 && currentDeck.length > (forceSwitch ? 0 : 1)) {
-       // Sırayı değiştirme, aynı oyuncu devam etsin
        return;
     }
 
@@ -117,33 +130,48 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: `radial-gradient(circle at top, ${activeGlow} 0%, var(--color-bg) 60%)`,
-      transition: 'background 0.5s ease',
-      display: 'flex', flexDirection: 'column', padding: '20px'
+      minHeight: '100vh', width: '100%',
+      background: activeBg,
+      transition: 'background 1s ease',
+      display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
+      padding: '40px 20px'
     }}>
+      
+      {/* Background Decor */}
+      <motion.div animate={{ y: [0, -30, 0], x: [0, 15, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', top: '10%', left: '5%', fontSize: '4rem', opacity: 0.6 }}>🃏</motion.div>
+      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.6 }}>✨</motion.div>
+      <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 3, repeat: Infinity }} style={{ position: 'absolute', top: '40%', right: '5%', fontSize: '3rem' }}>🔥</motion.div>
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ color: activeColor, fontSize: '1.5rem', fontWeight: 'bold' }}>{players[currentPlayer].name} Sırası</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <div className="glass" style={{ padding: '8px 16px', fontSize: '1.2rem', fontWeight: 'bold' }}>
-            Puan: {players[currentPlayer].score}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem', zIndex: 10 }}>
+        <motion.h2 
+          key={currentPlayer}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          style={{ 
+            color: 'white', fontSize: '3rem', fontWeight: '900', 
+            textShadow: '0 5px 15px rgba(0,0,0,0.4)', textAlign: 'center',
+            margin: 0
+          }}
+        >
+          {currentPlayer === 'woman' ? '👩' : '👱‍♂️'} {players[currentPlayer].name}
+        </motion.h2>
+        
+        {settings.duration > 0 && (
+          <div style={{ 
+            color: 'white', marginTop: '10px', fontSize: '1.2rem', fontWeight: 'bold', 
+            background: 'rgba(0,0,0,0.3)', padding: '8px 20px', borderRadius: '20px',
+            border: `2px solid white`, backdropFilter: 'blur(10px)',
+            boxShadow: '0 10px 20px rgba(0,0,0,0.2)'
+          }}>
+            ⏱️ {formatTime(players[currentPlayer].timeRemaining)}
+            {cardState === 'executing' ? ' (Zaman İşliyor)' : ''}
           </div>
-          {settings.duration > 0 && (
-            <div style={{ 
-              color: players[currentPlayer].timeRemaining < 60 ? '#ff3333' : '#ffb3d1', 
-              marginTop: '5px', fontSize: '1.2rem', fontWeight: 'bold', 
-              background: 'rgba(0,0,0,0.5)', padding: '4px 12px', borderRadius: '12px',
-              border: `1px solid ${players[currentPlayer].timeRemaining < 60 ? '#ff3333' : activeColor}`
-            }}>
-              ⏱️ {formatTime(players[currentPlayer].timeRemaining)}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Main Play Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
         
         <AnimatePresence mode="wait">
           {cardState === 'hidden' && (
@@ -153,17 +181,28 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.2, opacity: 0, rotateY: 90 }}
               onClick={drawCard}
+              whileHover={{ y: -10 }}
+              whileTap={{ scale: 0.95 }}
               style={{
                 width: '240px', height: '360px',
-                background: 'linear-gradient(135deg, #2a2a35, #1a1a25)',
-                border: `2px solid ${activeColor}`,
+                background: 'linear-gradient(135deg, #fff, #f0f0f0)',
+                border: `8px solid white`,
                 borderRadius: '16px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: `0 0 30px ${activeGlow}`
+                boxShadow: `
+                  -5px 5px 0 rgba(255,255,255,0.8),
+                  -10px 10px 0 rgba(255,255,255,0.6),
+                  -15px 15px 0 rgba(255,255,255,0.4),
+                  0 30px 60px rgba(0,0,0,0.5)
+                `,
+                position: 'relative',
+                backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 10px, transparent 10px, transparent 20px)'
               }}
             >
-              <div style={{ opacity: 0.5, border: '2px dashed rgba(255,255,255,0.2)', width: '90%', height: '94%', borderRadius: '12px' }} />
+              <h1 style={{ color: activeColor, fontSize: '3rem', fontWeight: '900', textShadow: '0 5px 15px rgba(0,0,0,0.2)' }}>
+                KART ÇEK
+              </h1>
             </motion.div>
           )}
 
@@ -173,34 +212,41 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
               initial={{ scale: 0.8, opacity: 0, rotateY: -90 }}
               animate={{ scale: 1, opacity: 1, rotateY: 0 }}
               style={{
-                width: '280px', minHeight: '400px',
+                width: '300px', minHeight: '420px',
                 background: 'white', color: 'black',
-                borderRadius: '16px', padding: '24px',
+                borderRadius: '24px', padding: '30px',
                 display: 'flex', flexDirection: 'column',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+                boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
+                border: `4px solid ${activeColor}`
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', color: activeColor }}>{currentCard.type}</span>
-                <span style={{ fontWeight: 'bold' }}>{currentCard.points} Puan</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '2px solid #f0f0f0', paddingBottom: '15px' }}>
+                <span style={{ fontWeight: '900', textTransform: 'uppercase', color: activeColor, fontSize: '0.9rem' }}>
+                  {CATEGORY_NAMES[currentCard.category] || currentCard.category}
+                </span>
+                <span style={{ fontWeight: '900', color: '#555', fontSize: '0.9rem' }}>{currentCard.points} PUAN</span>
               </div>
               
-              <h3 style={{ fontSize: '1.5rem', textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: '900', textAlign: 'center', color: '#111', marginBottom: '15px' }}>
+                {currentCard.title}
+              </h2>
+              
+              <p style={{ fontSize: '1.2rem', textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#444', lineHeight: 1.5 }}>
                 {currentCard.text}
-              </h3>
+              </p>
 
               {cardState === 'revealed' && (
-                <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                  <button onClick={handleReject} style={{ flex: 1, padding: '15px', background: 'var(--color-red)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>REDDET</button>
-                  <button onClick={handleAccept} style={{ flex: 1, padding: '15px', background: 'var(--color-green)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>KABUL ET</button>
+                <div style={{ display: 'flex', gap: '15px', marginTop: '30px' }}>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={handleReject} style={{ flex: 1, padding: '15px', background: '#d00000', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', boxShadow: '0 10px 20px rgba(208,0,0,0.3)', cursor: 'pointer' }}>REDDET</motion.button>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={handleAccept} style={{ flex: 1, padding: '15px', background: '#2b9348', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', boxShadow: '0 10px 20px rgba(43,147,72,0.3)', cursor: 'pointer' }}>KABUL ET</motion.button>
                 </div>
               )}
 
               {cardState === 'executing' && (
-                <div style={{ marginTop: '20px' }}>
-                  <button onClick={handleComplete} style={{ width: '100%', padding: '15px', background: activeColor, color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
-                    GÖREVİ BİTİRDİM
-                  </button>
+                <div style={{ marginTop: '30px' }}>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={handleComplete} style={{ width: '100%', padding: '18px', background: activeColor, color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '1.1rem', boxShadow: `0 10px 20px ${activeColor}50`, cursor: 'pointer' }}>
+                    GÖREVİ BİTİRDİM ✅
+                  </motion.button>
                 </div>
               )}
             </motion.div>
@@ -211,18 +257,27 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
               key="review"
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="glass-panel"
-              style={{ padding: '24px', width: '90%', maxWidth: '400px' }}
+              style={{ 
+                background: 'rgba(255,255,255,0.95)', padding: '40px', borderRadius: '30px', 
+                width: '90%', maxWidth: '400px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                border: '4px solid white', textAlign: 'center'
+              }}
             >
-              <h3 style={{ color: opponent === 'woman' ? 'var(--color-purple)' : 'var(--color-orange)', textAlign: 'center', marginBottom: '20px' }}>
+              <h3 style={{ color: opponent === 'woman' ? '#ff0844' : '#f5af19', marginBottom: '20px', fontSize: '1.5rem', fontWeight: '900' }}>
                 {players[opponent].name} Onayı
               </h3>
               
-              <p style={{ textAlign: 'center', marginBottom: '20px' }}>Görev başarıyla tamamlandı mı?</p>
+              <p style={{ marginBottom: '30px', fontSize: '1.2rem', color: '#333', fontWeight: 'bold' }}>
+                Görev başarıyla tamamlandı mı?
+              </p>
               
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => submitReview(false)} style={{ flex: 1, padding: '12px', background: 'var(--color-red)', color: 'white', border: 'none', borderRadius: '8px' }}>Hayır</button>
-                <button onClick={() => submitReview(true, 2)} style={{ flex: 1, padding: '12px', background: 'var(--color-green)', color: 'white', border: 'none', borderRadius: '8px' }}>Evet (+ Jest Puanı)</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => submitReview(true, 2)} style={{ padding: '18px', background: '#2b9348', color: 'white', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(43,147,72,0.3)' }}>
+                  EVET (+Jest Puanı)
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={() => submitReview(false)} style={{ padding: '18px', background: '#d00000', color: 'white', border: 'none', borderRadius: '15px', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 10px 20px rgba(208,0,0,0.3)' }}>
+                  HAYIR (0 Puan)
+                </motion.button>
               </div>
             </motion.div>
           )}
@@ -230,20 +285,23 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
 
       </div>
 
-      {/* Footer Stats */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
+      {/* Footer Stats - Sadece Jokerleri ve Tamamlananları Göster, Puanı Gizle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '20px', background: 'rgba(0,0,0,0.3)', borderRadius: '20px', backdropFilter: 'blur(10px)', zIndex: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.8rem', color: '#888' }}>Red Edilen</span>
-          <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--color-red)' }}>{players[currentPlayer].rejected}</span>
-        </div>
-        <div style={{ display: 'flex', gap: '5px' }}>
-          {[...Array(settings.jokerCount)].map((_, i) => (
-             <div key={i} style={{ width: '30px', height: '40px', background: i < players[currentPlayer].jokers ? activeColor : '#333', borderRadius: '4px' }} />
-          ))}
+          <span style={{ fontSize: '0.9rem', color: '#ccc', fontWeight: 'bold' }}>Red Edilen</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#ffb3c6' }}>{players[currentPlayer].rejected}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.8rem', color: '#888' }}>Tamamlanan</span>
-          <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--color-green)' }}>{players[currentPlayer].completed}</span>
+          <span style={{ fontSize: '0.9rem', color: '#ccc', fontWeight: 'bold', marginBottom: '5px' }}>Jokerler</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[...Array(settings.jokerCount)].map((_, i) => (
+               <div key={i} style={{ width: '15px', height: '15px', background: i < players[currentPlayer].jokers ? 'white' : 'rgba(255,255,255,0.2)', borderRadius: '50%', boxShadow: i < players[currentPlayer].jokers ? '0 0 10px white' : 'none' }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.9rem', color: '#ccc', fontWeight: 'bold' }}>Tamamlanan</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#b7e4c7' }}>{players[currentPlayer].completed}</span>
         </div>
       </div>
     </div>
