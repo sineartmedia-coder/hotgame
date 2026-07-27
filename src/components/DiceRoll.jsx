@@ -80,9 +80,9 @@ const DiceRoll = ({ players, onFinish }) => {
       
       {/* Yüzen Emojiler ve Işıklar (Canlılık katar) */}
       <motion.div animate={{ y: [0, -30, 0], x: [0, 15, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }} style={{ position: 'absolute', top: '10%', left: '5%', fontSize: '4rem', opacity: 0.8 }}>🎲</motion.div>
-      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.8 }}>✨</motion.div>
-      <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 3, repeat: Infinity }} style={{ position: 'absolute', top: '40%', right: '5%', fontSize: '3rem' }}>🔥</motion.div>
-      <motion.div animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }} transition={{ duration: 6, repeat: Infinity }} style={{ position: 'absolute', bottom: '10%', left: '10%', fontSize: '3.5rem' }}>💋</motion.div>
+      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.8 }}>💋</motion.div>
+      <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 3, repeat: Infinity }} style={{ position: 'absolute', top: '40%', right: '5%', fontSize: '3rem' }}>🍑</motion.div>
+      <motion.div animate={{ y: [0, -20, 0], opacity: [0.6, 1, 0.6] }} transition={{ duration: 6, repeat: Infinity }} style={{ position: 'absolute', bottom: '10%', left: '10%', fontSize: '3.5rem' }}>🍆</motion.div>
 
       <motion.h1 
         initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -101,7 +101,7 @@ const DiceRoll = ({ players, onFinish }) => {
           transform: turn === 'woman' && !winner ? 'scale(1.1)' : 'scale(1)'
         }}>
           <div style={{ background: 'rgba(255,255,255,0.2)', padding: '5px 15px', borderRadius: '20px', backdropFilter: 'blur(5px)', marginBottom: '10px' }}>
-            <h2 style={{ color: 'white', fontSize: '1.2rem', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>👩 {players.woman.name}</h2>
+            <h2 style={{ color: 'white', fontSize: '1.2rem', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{players.woman.avatar} {players.woman.name}</h2>
           </div>
           <div style={{ 
             width: '80px', height: '80px', borderRadius: '20px', 
@@ -122,7 +122,7 @@ const DiceRoll = ({ players, onFinish }) => {
           transform: turn === 'man' && !winner ? 'scale(1.1)' : 'scale(1)'
         }}>
           <div style={{ background: 'rgba(255,255,255,0.2)', padding: '5px 15px', borderRadius: '20px', backdropFilter: 'blur(5px)', marginBottom: '10px' }}>
-            <h2 style={{ color: 'white', fontSize: '1.2rem', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>👱‍♂️ {players.man.name}</h2>
+            <h2 style={{ color: 'white', fontSize: '1.2rem', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{players.man.avatar} {players.man.name}</h2>
           </div>
           <div style={{ 
             width: '80px', height: '80px', borderRadius: '20px', 
@@ -205,7 +205,7 @@ const DiceRoll = ({ players, onFinish }) => {
               fontWeight: '900',
               textTransform: 'uppercase'
             }}>
-              {players[winner].name}
+              {players[winner].avatar} {players[winner].name}
             </h2>
           </motion.div>
         )}

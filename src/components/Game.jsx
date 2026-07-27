@@ -37,8 +37,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const activeGlow = currentPlayer === 'woman' ? 'rgba(157, 78, 221, 0.4)' : 'rgba(255, 121, 0, 0.4)';
   
   const activeBg = currentPlayer === 'woman' 
-    ? `radial-gradient(circle at top, ${activeGlow} 0%, #050010 100%)` 
-    : `radial-gradient(circle at top, ${activeGlow} 0%, #050010 100%)`;
+    ? `radial-gradient(circle at top, ${activeGlow} 0%, #3c1053 100%)` 
+    : `radial-gradient(circle at top, ${activeGlow} 0%, #4a2100 100%)`;
     
   const opponent = currentPlayer === 'woman' ? 'man' : 'woman';
 
@@ -140,7 +140,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       style={{
         width: '100%', height: '100%',
         position: 'absolute',
-        background: `linear-gradient(135deg, rgba(20,20,20,0.95), rgba(0,0,0,1))`,
+        background: `linear-gradient(135deg, rgba(30,10,50,0.95), rgba(10,0,20,1))`,
         border: `3px solid ${activeColor}`,
         borderRadius: '16px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -153,8 +153,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         width: '85%', height: '90%', 
         border: `2px solid rgba(255,255,255,0.1)`, 
         borderRadius: '12px', 
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: `radial-gradient(circle, ${activeGlow} 0%, transparent 60%)`
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: `radial-gradient(circle, ${activeGlow} 0%, transparent 70%)`
       }}>
         {children}
       </div>
@@ -171,8 +171,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     }}>
       
       {/* Background Decor */}
-      <motion.div animate={{ y: [0, -30, 0], x: [0, 15, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 6, repeat: Infinity }} style={{ position: 'absolute', top: '10%', left: '5%', fontSize: '4rem', opacity: 0.2 }}>♠️</motion.div>
-      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 7, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.2 }}>♥️</motion.div>
+      <motion.div animate={{ y: [0, -30, 0], x: [0, 15, 0], rotate: [0, 10, -10, 0] }} transition={{ duration: 6, repeat: Infinity }} style={{ position: 'absolute', top: '10%', left: '5%', fontSize: '4rem', opacity: 0.2 }}>💋</motion.div>
+      <motion.div animate={{ y: [0, 30, 0], x: [0, -20, 0], rotate: [0, -15, 15, 0] }} transition={{ duration: 7, repeat: Infinity }} style={{ position: 'absolute', bottom: '15%', right: '10%', fontSize: '4rem', opacity: 0.2 }}>😈</motion.div>
+      <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.3, 0.1] }} transition={{ duration: 5, repeat: Infinity }} style={{ position: 'absolute', top: '40%', right: '5%', fontSize: '3rem' }}>🍑</motion.div>
 
       {/* Header */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem', zIndex: 10 }}>
@@ -186,7 +187,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             margin: 0
           }}
         >
-          {currentPlayer === 'woman' ? '👩' : '👱‍♂️'} {players[currentPlayer].name}
+          {players[currentPlayer].avatar} {players[currentPlayer].name}
         </motion.h2>
         
         {settings.duration > 0 && (
@@ -226,7 +227,13 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
               
               <CardBack rotation={0} offsetX={0} isFront={true}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '4rem', filter: `drop-shadow(0 0 10px ${activeColor})` }}>🔥</span>
+                  <span style={{ fontSize: '4rem', filter: `drop-shadow(0 0 10px ${activeColor})`, marginBottom: '10px' }}>🔥</span>
+                  <h3 style={{ 
+                    color: 'white', fontSize: '1.5rem', fontWeight: '900', letterSpacing: '2px', 
+                    margin: 0, textShadow: `0 0 10px ${activeColor}`
+                  }}>
+                    GÖREV KARTI
+                  </h3>
                   
                   {/* Cards Remaining Badge */}
                   <div style={{ 
