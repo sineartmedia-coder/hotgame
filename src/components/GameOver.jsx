@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_PENALTIES } from '../data/cards';
+import { useMultiplayer } from '../context/MultiplayerContext';
 
 // 9 ceza kartını 3x3 grid'de gösterir, tıklanınca açılır
 const PenaltyGrid = ({ onClose }) => {
@@ -98,6 +99,12 @@ const PenaltyGrid = ({ onClose }) => {
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 const GameOver = ({ players, onRestart }) => {
   const [showPenalties, setShowPenalties] = useState(false);
+  const { reset } = useMultiplayer();
+
+  const handleRestart = () => {
+    reset();
+    onRestart();
+  };
 
   const bonus = (p) => p.timeRemaining > 0 ? Math.floor(p.timeRemaining / 60) * 2 : 0;
   const wScore = players.woman.score + bonus(players.woman);
@@ -204,7 +211,7 @@ const GameOver = ({ players, onRestart }) => {
           <motion.button
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }}
             whileTap={{ scale: 0.95 }}
-            onClick={onRestart}
+            onClick={handleRestart}
             style={{
               padding: '16px', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem',
               background: 'rgba(255,255,255,0.1)',

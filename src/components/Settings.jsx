@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings as SettingsIcon, ListTodo, Zap, Gamepad2, HelpCircle, ChevronRight, ChevronDown, Check, X, Skull, Flame } from 'lucide-react';
 import { MOCK_CARDS, MOCK_JOKERS, MOCK_QUESTIONS, MOCK_PENALTIES } from '../data/cards';
+import RoomSetup from './RoomSetup';
 
 const TABS = [
   { id: 'genel', label: 'Genel', icon: SettingsIcon },
@@ -376,19 +377,10 @@ const Settings = ({ settings, setSettings, onNext }) => {
         </AnimatePresence>
       </div>
 
-      {/* Start Button */}
-      <motion.button 
-        whileTap={{ scale: 0.95 }}
-        className="btn-primary" 
-        style={{ 
-          width: '100%', marginTop: '20px', zIndex: 10,
-          background: 'linear-gradient(135deg, #ff3c78, #ff7900)',
-          boxShadow: '0 0 25px rgba(255,60,120,0.4)'
-        }} 
-        onClick={onNext}
-      >
-        OYUNU BAŞLAT
-      </motion.button>
+      {/* Room Setup + Start */}
+      <div style={{ zIndex: 10, marginTop: '20px' }}>
+        <RoomSetup onConnected={onNext} />
+      </div>
     </div>
   );
 };
