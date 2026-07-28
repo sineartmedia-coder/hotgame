@@ -124,16 +124,27 @@ const GameOver = ({ players, onRestart }) => {
       </AnimatePresence>
 
       <div style={{
-        minHeight: '100vh', width: '100%',
+        width: '100%',
+        height: '100%',
         background: `radial-gradient(circle at top, rgba(157,78,221,0.3) 0%, #1e0b2e 100%)`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '32px 20px', position: 'relative', overflow: 'hidden'
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
         {/* BG Decor */}
-        <motion.div animate={{ y: [0,-20,0], opacity: [0.1,0.3,0.1] }} transition={{ duration: 5, repeat: Infinity }}
-          style={{ position: 'absolute', top: '8%', left: '8%', fontSize: '4rem', pointerEvents: 'none' }}>🏆</motion.div>
-        <motion.div animate={{ y: [0,20,0], opacity: [0.1,0.3,0.1] }} transition={{ duration: 6, repeat: Infinity }}
-          style={{ position: 'absolute', bottom: '10%', right: '8%', fontSize: '3.5rem', pointerEvents: 'none' }}>🎊</motion.div>
+        <motion.div animate={{ y:[0,-20,0], opacity:[0.1,0.3,0.1] }} transition={{ duration:5, repeat:Infinity }}
+          style={{ position:'absolute', top:'8%', left:'8%', fontSize:'3rem', pointerEvents:'none' }}>🏆</motion.div>
+        <motion.div animate={{ y:[0,20,0], opacity:[0.1,0.3,0.1] }} transition={{ duration:6, repeat:Infinity }}
+          style={{ position:'absolute', bottom:'10%', right:'8%', fontSize:'2.5rem', pointerEvents:'none' }}>🎊</motion.div>
+
+        {/* Scrollable content */}
+        <div className="screen-scroll" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '24px 16px',
+          justifyContent: 'center',
+          minHeight: '100%',
+        }}>
 
         <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           style={{ fontSize: '3rem', color: 'white', fontWeight: '900', marginBottom: '16px', textAlign: 'center',
@@ -219,9 +230,10 @@ const GameOver = ({ players, onRestart }) => {
               backdropFilter: 'blur(10px)'
             }}
           >
-            🔄 Tekrar Oyna
+          🔄 Tekrar Oyna
           </motion.button>
         </div>
+        </div> {/* /screen-scroll */}
       </div>
     </>
   );

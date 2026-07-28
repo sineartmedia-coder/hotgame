@@ -137,11 +137,12 @@ const DiceRoll = ({ players, onFinish }) => {
 
   return (
     <div style={{
-      minHeight: '100vh', width: '100%',
+      width: '100%',
+      height: '100%',
       background: activeBg,
       transition: 'background 1s ease',
       display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
-      padding: '40px 20px'
+      padding: 'clamp(16px, 4vw, 40px) clamp(12px, 4vw, 20px)',
     }}>
       
       {/* Floating Emojis */}
@@ -156,7 +157,7 @@ const DiceRoll = ({ players, onFinish }) => {
 
       <motion.h1
         initial={{ y:-20, opacity:0 }} animate={{ y:0, opacity:1 }}
-        style={{ color:'white', textAlign:'center', marginBottom:'40px', zIndex:10, fontSize:'2.5rem', fontWeight:'900', textShadow:'0 5px 15px rgba(0,0,0,0.3)' }}
+        style={{ color:'white', textAlign:'center', marginBottom:'clamp(16px,4vw,40px)', zIndex:10, fontSize:'clamp(1.4rem,6vw,2.5rem)', fontWeight:'900', textShadow:'0 5px 15px rgba(0,0,0,0.3)', flexShrink: 0 }}
       >
         KİM BAŞLAYACAK?
       </motion.h1>

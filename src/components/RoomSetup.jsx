@@ -188,12 +188,16 @@ const RoomSetup = ({ onConnected }) => {
               onChange={e => setInputCode(e.target.value.toUpperCase().slice(0, 6))}
               placeholder="ODA KODU"
               maxLength={6}
+              inputMode="text"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              autoComplete="off"
               style={{
-                width: '100%', padding: '18px', borderRadius: '14px',
+                width: '100%', padding: '16px', borderRadius: '14px',
                 background: 'rgba(255,255,255,0.05)',
                 border: '2px solid rgba(255,121,0,0.5)',
-                color: 'white', fontSize: '1.8rem', textAlign: 'center',
-                outline: 'none', fontWeight: '900', letterSpacing: '8px',
+                color: 'white', fontSize: '1.6rem', textAlign: 'center',
+                outline: 'none', fontWeight: '900', letterSpacing: '6px',
                 fontFamily: 'monospace',
               }}
             />

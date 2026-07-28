@@ -17,11 +17,11 @@ const FloatingEmoji = ({ emoji, style, duration, delay }) => (
       zIndex: 0,
     }}
     animate={{
-      y: [0, -40, 0, 30, 0],
-      x: [0, 15, -10, 20, 0],
-      rotate: [0, 20, -15, 10, 0],
-      opacity: [0.12, 0.22, 0.12, 0.18, 0.12],
-      scale: [1, 1.1, 0.95, 1.05, 1],
+      y: [0, -30, 0, 20, 0],
+      x: [0, 10, -8, 14, 0],
+      rotate: [0, 15, -12, 8, 0],
+      opacity: [0.1, 0.2, 0.1, 0.16, 0.1],
+      scale: [1, 1.08, 0.96, 1.04, 1],
     }}
     transition={{
       duration: duration,
@@ -36,12 +36,12 @@ const FloatingEmoji = ({ emoji, style, duration, delay }) => (
 
 const Home = ({ onStart }) => {
   const [particles] = useState(() =>
-    Array.from({ length: 28 }, (_, i) => ({
+    Array.from({ length: 18 }, (_, i) => ({
       id: i,
       emoji: EMOJIS[i % EMOJIS.length],
-      left: `${Math.random() * 95}%`,
-      top: `${Math.random() * 95}%`,
-      size: `${1.2 + Math.random() * 2.2}rem`,
+      left: `${Math.random() * 92}%`,
+      top: `${Math.random() * 92}%`,
+      size: `${1.0 + Math.random() * 1.8}rem`,
       duration: 5 + Math.random() * 7,
       delay: Math.random() * 4,
     }))
@@ -49,8 +49,8 @@ const Home = ({ onStart }) => {
 
   return (
     <div style={{
-      minHeight: '100vh',
       width: '100%',
+      height: '100%',
       background: 'radial-gradient(ellipse at 20% 20%, #3a0050 0%, #0a0010 40%, #1a000a 70%, #0a0010 100%)',
       display: 'flex',
       flexDirection: 'column',
@@ -58,10 +58,10 @@ const Home = ({ onStart }) => {
       justifyContent: 'center',
       position: 'relative',
       overflow: 'hidden',
-      padding: '24px',
+      padding: '20px 16px',
     }}>
 
-      {/* Floating Emojis Background */}
+      {/* Floating Emojis */}
       {particles.map(p => (
         <FloatingEmoji
           key={p.id}
@@ -75,29 +75,27 @@ const Home = ({ onStart }) => {
       {/* Glowing Orbs */}
       <div style={{
         position: 'absolute', top: '15%', left: '10%',
-        width: '200px', height: '200px',
+        width: '180px', height: '180px',
         background: 'radial-gradient(circle, rgba(157,78,221,0.3) 0%, transparent 70%)',
         borderRadius: '50%', pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', bottom: '20%', right: '10%',
-        width: '250px', height: '250px',
+        width: '200px', height: '200px',
         background: 'radial-gradient(circle, rgba(255,121,0,0.25) 0%, transparent 70%)',
-        borderRadius: '50%', pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        width: '350px', height: '350px',
-        background: 'radial-gradient(circle, rgba(255,0,80,0.1) 0%, transparent 70%)',
         borderRadius: '50%', pointerEvents: 'none',
       }} />
 
       {/* Main Content */}
-      <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      <div style={{
+        position: 'relative', zIndex: 10,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+        gap: '0',
+      }}>
 
         {/* Top Emoji Row */}
         <motion.div
-          style={{ fontSize: '2.5rem', marginBottom: '1rem', letterSpacing: '8px' }}
+          style={{ fontSize: 'clamp(1.8rem, 7vw, 2.5rem)', marginBottom: '8px', letterSpacing: '6px' }}
           animate={{ y: [0, -8, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         >
@@ -123,7 +121,7 @@ const Home = ({ onStart }) => {
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             style={{
               fontFamily: "'Outfit', sans-serif",
-              fontSize: 'clamp(3rem, 13vw, 6rem)',
+              fontSize: 'clamp(2.6rem, 14vw, 6rem)',
               fontWeight: 900,
               cursor: 'pointer',
               lineHeight: 1.05,
@@ -133,36 +131,36 @@ const Home = ({ onStart }) => {
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               letterSpacing: '-1px',
-              marginBottom: '0.5rem',
+              marginBottom: '4px',
             }}
           >
-            YANMAYLIM<br />MI?
+            YANMAYLI<br />MI?
           </motion.h1>
         </motion.div>
 
-        {/* Tap Hint */}
+        {/* Start Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          style={{ marginTop: '1.5rem' }}
+          style={{ marginTop: '20px' }}
         >
           <motion.div
-            animate={{ y: [0, -5, 0], opacity: [0.7, 1, 0.7] }}
+            animate={{ y: [0, -5, 0], opacity: [0.8, 1, 0.8] }}
             transition={{ duration: 1.8, repeat: Infinity }}
             onClick={onStart}
             style={{
               background: 'linear-gradient(135deg, rgba(157,78,221,0.3), rgba(255,60,120,0.3))',
               border: '1.5px solid rgba(255,100,150,0.5)',
               borderRadius: '50px',
-              padding: '14px 36px',
+              padding: '14px 32px',
               cursor: 'pointer',
               backdropFilter: 'blur(10px)',
             }}
           >
             <span style={{
-              fontSize: '1.1rem',
-              fontWeight: 600,
+              fontSize: 'clamp(0.9rem, 4vw, 1.1rem)',
+              fontWeight: 700,
               color: '#ffb3d1',
               letterSpacing: '2px',
               textTransform: 'uppercase',
@@ -178,8 +176,8 @@ const Home = ({ onStart }) => {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
           style={{
-            marginTop: '1.5rem',
-            fontSize: '0.95rem',
+            marginTop: '16px',
+            fontSize: 'clamp(0.75rem, 3vw, 0.95rem)',
             color: 'rgba(255,200,220,0.6)',
             fontWeight: 300,
             letterSpacing: '3px',
@@ -191,7 +189,7 @@ const Home = ({ onStart }) => {
 
         {/* Bottom Emoji Row */}
         <motion.div
-          style={{ fontSize: '2rem', marginTop: '2rem', letterSpacing: '6px' }}
+          style={{ fontSize: 'clamp(1.5rem, 6vw, 2rem)', marginTop: '20px', letterSpacing: '5px' }}
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
         >

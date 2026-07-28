@@ -13,34 +13,34 @@ const CATEGORY_NAMES = {
 const MiniDeck = ({ count, color, icon, label }) => (
   <motion.div
     whileHover={count > 0 ? { y: -8, scale: 1.05 } : {}}
-    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}
+    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}
   >
-    <div style={{ position: 'relative', width: '70px', height: '100px' }}>
-      {count > 1 && <div style={{ position: 'absolute', top: 0, left: '-7px', width: '70px', height: '100px', background: `${color}55`, border: `2px solid ${color}88`, borderRadius: '12px', transform: 'rotate(-6deg)' }} />}
-      {count > 2 && <div style={{ position: 'absolute', top: 0, left: '7px', width: '70px', height: '100px', background: `${color}44`, border: `2px solid ${color}66`, borderRadius: '12px', transform: 'rotate(5deg)' }} />}
+    <div style={{ position: 'relative', width: 'clamp(50px,14vw,70px)', height: 'clamp(72px,20vw,100px)' }}>
+      {count > 1 && <div style={{ position: 'absolute', top: 0, left: '-5px', width: '100%', height: '100%', background: `${color}55`, border: `2px solid ${color}88`, borderRadius: '10px', transform: 'rotate(-6deg)' }} />}
+      {count > 2 && <div style={{ position: 'absolute', top: 0, left: '5px', width: '100%', height: '100%', background: `${color}44`, border: `2px solid ${color}66`, borderRadius: '10px', transform: 'rotate(5deg)' }} />}
       <div style={{
-        position: 'absolute', top: 0, left: 0, width: '70px', height: '100px',
+        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
         background: `linear-gradient(135deg, ${color}33, ${color}66)`,
-        border: `2.5px solid ${color}`, borderRadius: '12px',
+        border: `2px solid ${color}`, borderRadius: '10px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        boxShadow: `0 8px 20px ${color}50`
+        boxShadow: `0 6px 16px ${color}50`
       }}>
-        <span style={{ fontSize: '1.8rem' }}>{icon}</span>
-        <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: '900', marginTop: '4px', opacity: 0.9 }}>
+        <span style={{ fontSize: 'clamp(1.2rem,4vw,1.8rem)' }}>{icon}</span>
+        <span style={{ color: 'white', fontSize: 'clamp(0.55rem,2vw,0.72rem)', fontWeight: '900', marginTop: '3px', opacity: 0.9 }}>
           {count > 0 ? `${count} ADET` : 'BOŞ'}
         </span>
         {count > 0 && (
           <div style={{
-            position: 'absolute', top: '-10px', right: '-10px',
-            background: color, color: 'white', width: '26px', height: '26px', borderRadius: '50%',
+            position: 'absolute', top: '-8px', right: '-8px',
+            background: color, color: 'white', width: '22px', height: '22px', borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.8rem', fontWeight: '900', boxShadow: '0 3px 10px rgba(0,0,0,0.5)',
+            fontSize: '0.7rem', fontWeight: '900', boxShadow: '0 3px 8px rgba(0,0,0,0.5)',
             border: '2px solid white'
           }}>{count}</div>
         )}
       </div>
     </div>
-    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.85)', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>{label}</span>
+    <span style={{ fontSize: 'clamp(0.55rem,2vw,0.72rem)', color: 'rgba(255,255,255,0.85)', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>{label}</span>
   </motion.div>
 );
 
@@ -411,9 +411,11 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
 
   return (
     <div style={{
-      minHeight: '100vh', width: '100%', background: activeBg, transition: 'background 1s ease',
+      width: '100%',
+      height: '100%',
+      background: activeBg, transition: 'background 1s ease',
       display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
-      padding: '24px 20px 16px'
+      padding: 'clamp(12px,3vw,24px) clamp(10px,3vw,20px) 0',
     }}>
       {/* BG Decor */}
       <motion.div animate={{ y:[0,-30,0], rotate:[0,10,-10,0] }} transition={{ duration:6, repeat:Infinity }}
@@ -472,7 +474,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       }}>
         <motion.h2
           key={currentPlayer} initial={{ scale:0.8, opacity:0 }} animate={{ scale:1, opacity:1 }}
-          style={{ color:'white', fontSize:'2.4rem', fontWeight:'900', textShadow:`0 5px 20px ${activeColor}`, textAlign:'center', margin:0 }}
+          style={{ color:'white', fontSize:'clamp(1.4rem,6vw,2.4rem)', fontWeight:'900', textShadow:`0 5px 20px ${activeColor}`, textAlign:'center', margin:0 }}
         >
           {players[currentPlayer].avatar} {players[currentPlayer].name}
           {isMyTurn && <span style={{ fontSize:'1rem', marginLeft:'10px', opacity:0.7 }}>(Sen)</span>}
@@ -540,7 +542,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
               initial={{ scale:0.8, opacity:0, y:30 }} animate={{ scale:1, opacity:1, y:0 }}
               exit={{ opacity:0, scale:1.1 }}
               onClick={drawCard} whileHover={{ y:-10 }} whileTap={{ scale:0.95 }}
-              style={{ width:'200px', height:'300px', position:'relative', cursor:'pointer' }}
+              style={{ width:'clamp(150px,45vw,200px)', height:'clamp(220px,65vw,300px)', position:'relative', cursor:'pointer' }}
             >
               {deckLen > 2 && <CardBack rotation={-12} offsetX={-28} isFront={false} />}
               {deckLen > 1 && <CardBack rotation={-6}  offsetX={-14} isFront={false} />}
@@ -563,8 +565,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             <motion.div key="card-open"
               initial={{ scale:0.8, opacity:0, rotateY:-90 }} animate={{ scale:1, opacity:1, rotateY:0 }}
               style={{
-                width:'300px', minHeight:'400px', background:'white', color:'black',
-                borderRadius:'24px', padding:'28px', display:'flex', flexDirection:'column',
+                width:'clamp(260px,88vw,300px)', minHeight:'clamp(320px,75vw,400px)', background:'white', color:'black',
+                borderRadius:'24px', padding:'clamp(16px,4vw,28px)', display:'flex', flexDirection:'column',
                 boxShadow:'0 30px 60px rgba(0,0,0,0.5)', border:`4px solid ${activeColor}`
               }}
             >
@@ -690,9 +692,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       {/* ── FOOTER ────────────────────────────────────────────────────────── */}
       <div style={{
         display:'flex', justifyContent:'space-between', alignItems:'flex-end',
-        padding:'20px 24px 24px', background:'rgba(0,0,0,0.4)', borderRadius:'28px',
-        backdropFilter:'blur(16px)', zIndex:10, marginTop:'12px',
-        border:'1px solid rgba(255,255,255,0.1)'
+        padding:'clamp(10px,3vw,20px) clamp(10px,3vw,24px) calc(clamp(10px,3vw,16px) + env(safe-area-inset-bottom, 0px))',
+        background:'rgba(0,0,0,0.4)', borderRadius:'20px 20px 0 0',
+        backdropFilter:'blur(16px)', zIndex:10, marginTop:'8px', flexShrink: 0,
+        border:'1px solid rgba(255,255,255,0.1)', borderBottom: 'none',
       }}>
         <MiniDeck count={players[localPlayer]?.rejected || 0} color="#d00000" icon="❌" label="Reddedilen" />
 

@@ -111,11 +111,14 @@ const Settings = ({ settings, setSettings, onNext }) => {
 
   return (
     <div style={{
-      minHeight: '100vh', width: '100%',
+      width: '100%',
+      height: '100%',
       background: 'radial-gradient(ellipse at bottom, #1a0033 0%, #050010 100%)',
-      display: 'flex', flexDirection: 'column',
-      padding: '24px', paddingTop: '40px',
-      color: 'white', position: 'relative', overflow: 'hidden'
+      display: 'flex',
+      flexDirection: 'column',
+      color: 'white',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
       {/* Süslemeler */}
       <motion.div
@@ -133,12 +136,12 @@ const Settings = ({ settings, setSettings, onNext }) => {
         💋
       </motion.div>
 
-      <h2 style={{ fontSize: '2.5rem', marginBottom: '20px', textAlign: 'center', fontWeight: 'bold', zIndex: 10 }}>
+      <h2 style={{ fontSize: 'clamp(1.4rem,6vw,2.5rem)', margin: '32px 20px 16px', textAlign: 'center', fontWeight: 'bold', zIndex: 10, flexShrink: 0 }}>
         <span className="text-gradient">Oyun Ayarları</span>
       </h2>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '20px', zIndex: 10 }}>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', margin: '0 12px 12px', zIndex: 10, flexShrink: 0, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         {TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -163,7 +166,7 @@ const Settings = ({ settings, setSettings, onNext }) => {
       </div>
 
       {/* Tab Content */}
-      <div className="glass-panel" style={{ flex: 1, padding: '20px', overflowY: 'auto', zIndex: 10 }}>
+      <div className="glass-panel screen-scroll" style={{ flex: 1, padding: '16px', margin: '0 12px', zIndex: 10 }}>
         <AnimatePresence mode="wait">
           
           {/* GENEL AYARLAR */}
@@ -378,7 +381,7 @@ const Settings = ({ settings, setSettings, onNext }) => {
       </div>
 
       {/* Room Setup + Start */}
-      <div style={{ zIndex: 10, marginTop: '20px' }}>
+      <div style={{ zIndex: 10, margin: '12px 12px 0', paddingBottom: '8px', flexShrink: 0 }}>
         <RoomSetup onConnected={onNext} />
       </div>
     </div>

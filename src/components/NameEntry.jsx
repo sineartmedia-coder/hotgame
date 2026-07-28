@@ -82,11 +82,25 @@ const NameEntry = ({ players, setPlayers, onNext }) => {
 
   return (
     <div style={{
-      minHeight: '100vh', width: '100%',
+      width: '100%',
+      height: '100%',
       background: 'radial-gradient(circle at center, #3c1053 0%, #1e0b2e 100%)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      padding: '24px', position: 'relative', overflow: 'hidden'
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
+      {/* Scrollable inner area */}
+      <div className="screen-scroll" style={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '24px 16px 24px',
+        justifyContent: 'center',
+        minHeight: '100%',
+      }}>
       
       {/* Background decorations */}
       <motion.div
@@ -233,6 +247,7 @@ const NameEntry = ({ players, setPlayers, onNext }) => {
           )}
         </AnimatePresence>
       </div>
+      </div>  {/* /screen-scroll */}
     </div>
   );
 };
