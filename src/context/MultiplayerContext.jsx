@@ -14,12 +14,12 @@ export const MultiplayerProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
   const [isWaiting, setIsWaiting] = useState(false);  // host waiting for guest
-  // host = woman, guest = man
-  const [localPlayer, setLocalPlayer] = useState(null); // 'woman' | 'man'
+  const [localPlayer, setLocalPlayer] = useState(null); // 'woman' | 'man' - oyuncu kendisi seçiyor
+  const [remotePlayerGender, setRemotePlayerGender] = useState(null); // karşı oyuncunun seçimi
 
   const peerRef = useRef(null);
   const connRef = useRef(null);
-  const dataHandlersRef = useRef([]);  // list of { type, handler } to call on incoming data
+  const dataHandlersRef = useRef([]);
 
   const destroyPeer = useCallback(() => {
     if (connRef.current) {
@@ -43,6 +43,10 @@ export const MultiplayerProvider = ({ children }) => {
   }, []);
 
   const handleIncomingData = useCallback((data) => {
+    // Karşı oyuncunun karakter seçimini yakala
+    if (data.type === 'characterChosen') {
+      setRemotePlayerGender(data.gender);
+    }
     dataHandlersRef.current.forEach(h => h(data));
   }, []);
 
@@ -83,11 +87,12 @@ export const MultiplayerProvider = ({ children }) => {
   const createRoom = useCallback((code) => {
     destroyPeer();
     setConnectionError(null);
+    setLocalPlayer(null);        // sıfırla - seçim ekranında seçilecek
+    setRemotePlayerGender(null);
     const peer = new window.Peer(code, getPeerConfig());
     peerRef.current = peer;
     setRoomCode(code);
     setRole('host');
-    setLocalPlayer('woman');
     setIsWaiting(true);
 
     peer.on('open', () => {
@@ -108,13 +113,13 @@ export const MultiplayerProvider = ({ children }) => {
   const joinRoom = useCallback((code) => {
     destroyPeer();
     setConnectionError(null);
-    // Guest uses a different peer id to avoid collision
+    setLocalPlayer(null);        // sıfırla - seçim ekranında seçilecek
+    setRemotePlayerGender(null);
     const guestId = code + '_guest_' + Math.floor(Math.random() * 9000 + 1000);
     const peer = new window.Peer(guestId, getPeerConfig());
     peerRef.current = peer;
     setRoomCode(code);
     setRole('guest');
-    setLocalPlayer('man');
 
     peer.on('open', () => {
       const conn = peer.connect(code);
@@ -125,6 +130,15 @@ export const MultiplayerProvider = ({ children }) => {
       setConnectionError(err.message || 'Odaya katılınamadı. Kodu kontrol edin.');
     });
   }, [destroyPeer, setupConnection]);
+
+  // Oyuncu kendi karakterini seçiyor ve karşı tarafa bildiriyor
+  const chooseCharacter = useCallback((gender) => {
+    setLocalPlayer(gender);
+    // Karşı oyuncuya seçimini bildir
+    if (connRef.current && connRef.current.open) {
+      connRef.current.send({ type: 'characterChosen', gender });
+    }
+  }, []);
 
   // Send data to peer
   const sendData = useCallback((payload) => {
@@ -143,14 +157,15 @@ export const MultiplayerProvider = ({ children }) => {
     setRole(null);
     setRoomCode('');
     setLocalPlayer(null);
+    setRemotePlayerGender(null);
     setConnectionError(null);
   }, [destroyPeer]);
 
   return (
     <MultiplayerContext.Provider value={{
-      role, roomCode, isConnected, isWaiting, localPlayer,
+      role, roomCode, isConnected, isWaiting, localPlayer, remotePlayerGender,
       connectionError, setConnectionError,
-      createRoom, joinRoom, sendData, onData, reset,
+      createRoom, joinRoom, sendData, onData, reset, chooseCharacter,
     }}>
       {children}
     </MultiplayerContext.Provider>
