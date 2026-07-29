@@ -1,607 +1,690 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence, useMotionValue, animate as mvAnimate } from 'framer-motion';
 import { MOCK_CARDS } from '../data/cards';
-import { dealGame, canPlayCard, cardScore, CARD_TYPES, COLOR_HEX, COLOR_DARK, UNO_COLORS, shuffle } from '../data/unoDeck';
+import { dealGame, canPlayCard, CARD_TYPES, UNO_COLORS, buildUnoDeck, shuffle } from '../data/unoDeck';
 import { useMultiplayer } from '../context/MultiplayerContext';
 
-// ─── Renk seçici modal ───────────────────────────────────────────────────────
+// ─── Temalar: Kadın vs Erkek ──────────────────────────────────────────────────
+const THEMES = {
+  woman: {
+    bg: 'radial-gradient(ellipse 140% 80% at 50% -10%, #6b0055 0%, #3d0035 25%, #1e001e 55%, #0d000f 100%)',
+    accent: '#f72585',
+    accentGlow: 'rgba(247,37,133,0.45)',
+    secondary: '#b5179e',
+    cardBack: 'linear-gradient(145deg, #5c0050 0%, #2d0030 100%)',
+    cardBackBorder: 'rgba(247,37,133,0.5)',
+    handBg: 'rgba(80,0,60,0.5)',
+    handBorder: 'rgba(247,37,133,0.3)',
+    turnRing: '#f72585',
+    float: [
+      { e: '💋', x: '8%',  t: '8%',  d: 5.5 },
+      { e: '🌹', x: '85%', t: '15%', d: 7.0 },
+      { e: '✨', x: '12%', t: '55%', d: 4.5 },
+      { e: '💜', x: '80%', t: '60%', d: 6.0 },
+    ],
+  },
+  man: {
+    bg: 'radial-gradient(ellipse 140% 80% at 50% -10%, #00254d 0%, #001229 25%, #000a1a 55%, #000508 100%)',
+    accent: '#ff7900',
+    accentGlow: 'rgba(255,121,0,0.45)',
+    secondary: '#f5af19',
+    cardBack: 'linear-gradient(145deg, #001e3c 0%, #000d18 100%)',
+    cardBackBorder: 'rgba(255,121,0,0.5)',
+    handBg: 'rgba(0,25,50,0.5)',
+    handBorder: 'rgba(255,121,0,0.3)',
+    turnRing: '#ff7900',
+    float: [
+      { e: '🔥', x: '8%',  t: '8%',  d: 5.0 },
+      { e: '⚡', x: '85%', t: '18%', d: 6.5 },
+      { e: '💥', x: '10%', t: '55%', d: 4.0 },
+      { e: '🖤', x: '82%', t: '58%', d: 7.0 },
+    ],
+  },
+};
+
+// ─── UNO Renk Teması ─────────────────────────────────────────────────────────
+const CARD_COLORS = {
+  kırmızı: { bg: 'linear-gradient(150deg,#c62828 0%,#8b0000 100%)', glow: '#ff5252', sym: '♥', label: 'KIRMIZI' },
+  mavi:    { bg: 'linear-gradient(150deg,#1565c0 0%,#0a2a6e 100%)', glow: '#5b9cf6', sym: '♦', label: 'MAVİ'    },
+  yeşil:   { bg: 'linear-gradient(150deg,#2e7d32 0%,#0d3b10 100%)', glow: '#69f069', sym: '♣', label: 'YEŞİL'   },
+  sarı:    { bg: 'linear-gradient(150deg,#f9a825 0%,#8f5200 100%)', glow: '#ffe57f', sym: '★', label: 'SARI'    },
+};
+
+// ─── Random card pool ─────────────────────────────────────────────────────────
+const _pool = [];
+const getRandomCard = () => {
+  if (_pool.length < 6) shuffle(buildUnoDeck()).forEach(c => _pool.push(c));
+  return { ..._pool.shift(), id: Date.now() + Math.random() * 100000 };
+};
+
+// ─── UnoCard – saf render bileşeni ───────────────────────────────────────────
+const UnoCard = ({ card, size = 'md', shadow = false }) => {
+  if (!card) return null;
+
+  const isTask    = card.type === CARD_TYPES.TASK;
+  const isWild    = card.type === CARD_TYPES.WILD;
+  const isSkip    = card.type === CARD_TYPES.SKIP;
+  const isReverse = card.type === CARD_TYPES.REVERSE;
+
+  const ct = CARD_COLORS[card.color] || CARD_COLORS.kırmızı;
+
+  const dims = {
+    sm:   { w: '52px',  h: '78px',  nf: '1.3rem', sf: '0.48rem' },
+    md:   { w: 'clamp(78px,21vw,98px)', h: 'clamp(117px,31vw,147px)', nf: 'clamp(1.8rem,5.5vw,2.4rem)', sf: 'clamp(0.5rem,1.4vw,0.68rem)' },
+    lg:   { w: '140px', h: '210px', nf: '3.8rem', sf: '0.95rem' },
+  };
+  const d = dims[size] || dims.md;
+
+  const cardBg = isTask
+    ? 'linear-gradient(150deg,#1a0000 0%,#380010 50%,#150008 100%)'
+    : isWild
+    ? 'linear-gradient(150deg,#12122a 0%,#0a0a1e 100%)'
+    : ct.bg;
+
+  const borderCol = isTask
+    ? 'rgba(255,60,0,0.55)'
+    : isWild
+    ? 'rgba(255,255,255,0.4)'
+    : `${ct.glow}66`;
+
+  return (
+    <div style={{
+      width: d.w, height: d.h, borderRadius: '12px',
+      background: cardBg,
+      border: `2px solid ${borderCol}`,
+      position: 'relative', overflow: 'hidden',
+      boxShadow: shadow ? `0 8px 24px rgba(0,0,0,0.6), 0 0 16px ${isTask ? 'rgba(255,60,0,0.3)' : isWild ? 'rgba(157,78,221,0.3)' : `${ct.glow}40`}` : 'none',
+      userSelect: 'none', WebkitUserSelect: 'none',
+      flexShrink: 0,
+    }}>
+      {/* Shine */}
+      <div style={{
+        position:'absolute', top:0, left:0, right:0, height:'38%',
+        background:'linear-gradient(180deg,rgba(255,255,255,0.13) 0%,transparent 100%)',
+        pointerEvents:'none',
+      }}/>
+
+      {/* SAYI KARTI */}
+      {!isTask && !isWild && !isSkip && !isReverse && (
+        <>
+          <div style={{
+            position:'absolute',inset:0,
+            backgroundImage:`radial-gradient(ellipse at 30% 70%,rgba(255,255,255,0.09) 0%,transparent 55%)`,
+          }}/>
+          {/* Sol üst */}
+          <div style={{ position:'absolute', top:'5px', left:'7px', color:'rgba(255,255,255,0.92)', fontWeight:'900', fontSize:d.sf, lineHeight:1.1, zIndex:1 }}>
+            <div style={{ fontStyle:'italic' }}>{card.value}</div>
+            <div style={{ opacity:0.65, fontSize:'0.8em' }}>{ct.sym}</div>
+          </div>
+          {/* Merkez büyük sayı */}
+          <div style={{ position:'absolute',inset:0, display:'flex',alignItems:'center',justifyContent:'center', zIndex:1 }}>
+            <span style={{
+              fontSize:d.nf, fontWeight:'900', color:'white', fontStyle:'italic',
+              textShadow:`0 0 20px ${ct.glow}, 0 2px 6px rgba(0,0,0,0.6)`,
+            }}>{card.value}</span>
+          </div>
+          {/* Sağ alt (ters) */}
+          <div style={{ position:'absolute', bottom:'5px', right:'7px', color:'rgba(255,255,255,0.92)', fontWeight:'900', fontSize:d.sf, lineHeight:1.1, transform:'rotate(180deg)', zIndex:1 }}>
+            <div style={{ fontStyle:'italic' }}>{card.value}</div>
+            <div style={{ opacity:0.65, fontSize:'0.8em' }}>{ct.sym}</div>
+          </div>
+        </>
+      )}
+
+      {/* SKIP / REVERSE */}
+      {(isSkip || isReverse) && (
+        <>
+          <div style={{
+            position:'absolute',inset:0,
+            backgroundImage:`radial-gradient(circle at 50% 50%,rgba(255,255,255,0.1) 0%,transparent 60%)`,
+          }}/>
+          <div style={{ position:'absolute', top:'5px', left:'7px', color:'rgba(255,255,255,0.85)', fontWeight:'900', fontSize:d.sf, zIndex:1 }}>
+            {isSkip ? '⊘' : '↩'}
+          </div>
+          <div style={{ position:'absolute',inset:0, display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center', gap:'4px', zIndex:1 }}>
+            <span style={{ fontSize: size==='sm' ? '1.6rem' : size==='lg' ? '3.5rem' : 'clamp(2rem,6vw,2.8rem)' }}>
+              {isSkip ? '⊘' : '↩'}
+            </span>
+            <span style={{ color:'rgba(255,255,255,0.85)', fontWeight:'900', fontSize:d.sf, letterSpacing:'1px', textTransform:'uppercase', textShadow:'0 1px 4px rgba(0,0,0,0.6)' }}>
+              {isSkip ? 'ATLA' : 'ÇEVİR'}
+            </span>
+          </div>
+          <div style={{ position:'absolute', bottom:'5px', right:'7px', color:'rgba(255,255,255,0.85)', fontWeight:'900', fontSize:d.sf, transform:'rotate(180deg)', zIndex:1 }}>
+            {isSkip ? '⊘' : '↩'}
+          </div>
+        </>
+      )}
+
+      {/* WILD */}
+      {isWild && (
+        <div style={{ position:'absolute',inset:0, display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center', gap:'8px' }}>
+          <div style={{
+            width: size==='sm'?'30px':size==='lg'?'72px':'clamp(46px,12vw,58px)',
+            height: size==='sm'?'30px':size==='lg'?'72px':'clamp(46px,12vw,58px)',
+            borderRadius:'50%',
+            background:'conic-gradient(#c62828 0 90deg,#1565c0 90deg 180deg,#2e7d32 180deg 270deg,#f9a825 270deg 360deg)',
+            border:'2.5px solid rgba(255,255,255,0.5)',
+            boxShadow:'0 0 20px rgba(255,255,255,0.25)',
+          }}/>
+          <span style={{ color:'rgba(255,255,255,0.8)', fontWeight:'900', fontSize:d.sf, letterSpacing:'0.5px', textTransform:'uppercase' }}>
+            RENK SEÇ
+          </span>
+        </div>
+      )}
+
+      {/* GÖREV KARTI */}
+      {isTask && (
+        <>
+          {/* ateş arka plan */}
+          <div style={{ position:'absolute',inset:0, background:'radial-gradient(circle at 50% 90%,rgba(255,80,0,0.35) 0%,transparent 60%)' }}/>
+          <div style={{ position:'absolute',inset:0, display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between', padding: size==='sm'?'5px':'10px 7px', zIndex:1 }}>
+            {/* Üst: GÖREV badge */}
+            <div style={{ background:'rgba(220,30,0,0.85)', borderRadius:'6px', padding:'2px 7px', display:'flex',alignItems:'center',gap:'3px' }}>
+              <span style={{ fontSize: size==='sm'?'0.55rem':'0.72rem' }}>🔥</span>
+              {size !== 'sm' && <span style={{ color:'white',fontWeight:'900',fontSize:'0.6rem',letterSpacing:'0.5px',textTransform:'uppercase' }}>GÖREV</span>}
+            </div>
+
+            {/* Orta: görev başlığı - YALNIZCA md/lg boyutunda */}
+            {size !== 'sm' && card.taskData?.title && (
+              <div style={{
+                color:'rgba(255,200,175,0.95)', fontWeight:'900',
+                fontSize: size==='lg' ? '0.95rem' : 'clamp(0.6rem,1.8vw,0.78rem)',
+                textAlign:'center', lineHeight:1.3, padding:'0 2px',
+                textShadow:'0 1px 4px rgba(0,0,0,0.9)',
+                maxHeight: size==='lg' ? '90px' : '52px', overflow:'hidden',
+              }}>
+                {card.taskData.title}
+              </div>
+            )}
+            {size === 'sm' && <span style={{ fontSize:'1rem' }}>🔥</span>}
+
+            {/* Alt: ceza göstergesi */}
+            <div style={{ background:'rgba(255,200,0,0.18)', border:'1px solid rgba(255,200,0,0.5)', borderRadius:'6px', padding:'2px 7px' }}>
+              <span style={{ color:'#ffcc00', fontWeight:'900', fontSize: size==='sm'?'0.6rem':'0.78rem' }}>
+                {card.display}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─── Rakip kartların arkası ───────────────────────────────────────────────────
+const OpponentHand = ({ count, theme }) => {
+  const n = Math.min(count, 7);
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', position:'relative', height:'72px' }}>
+      {[...Array(n)].map((_, i) => (
+        <motion.div
+          key={i}
+          animate={{ x:(i - (n-1)/2)*16, rotate:(i - (n-1)/2)*4 }}
+          style={{
+            position:'absolute',
+            width:'48px', height:'70px', borderRadius:'9px',
+            background: theme.cardBack,
+            border:`2px solid ${theme.cardBackBorder}`,
+            boxShadow:'0 4px 12px rgba(0,0,0,0.7)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontSize:'1rem',
+            backgroundImage:'repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,0.025) 8px,rgba(255,255,255,0.025) 16px)',
+          }}
+        >🔥</motion.div>
+      ))}
+      {count > 0 && (
+        <div style={{
+          position:'absolute', bottom:'-20px',
+          background:'rgba(0,0,0,0.6)', color:'rgba(255,255,255,0.65)',
+          borderRadius:'10px', padding:'2px 10px',
+          fontSize:'0.72rem', fontWeight:'900',
+        }}>{count} kart</div>
+      )}
+    </div>
+  );
+};
+
+// ─── Renk Seçici ─────────────────────────────────────────────────────────────
 const ColorPicker = ({ onSelect }) => (
   <motion.div
-    initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-    style={{
-      position: 'fixed', inset: 0, display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: 'rgba(0,0,0,0.8)',
-      backdropFilter: 'blur(6px)', zIndex: 100,
-    }}
+    initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+    style={{ position:'fixed',inset:0,zIndex:300, display:'flex',alignItems:'center',justifyContent:'center', background:'rgba(0,0,0,0.88)', backdropFilter:'blur(10px)' }}
   >
-    <div style={{ textAlign: 'center' }}>
-      <p style={{ color: 'white', fontWeight: '900', fontSize: '1.3rem', marginBottom: '24px' }}>
-        🌈 Renk Seç
-      </p>
-      <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+    <motion.div initial={{ scale:0.6,opacity:0 }} animate={{ scale:1,opacity:1 }} exit={{ scale:0.6,opacity:0 }} transition={{ type:'spring',bounce:0.4 }}
+      style={{ textAlign:'center' }}>
+      <div style={{ fontSize:'2.5rem',marginBottom:'12px' }}>🌈</div>
+      <p style={{ color:'white',fontWeight:'900',fontSize:'1.3rem',marginBottom:'24px' }}>Renk Seç</p>
+      <div style={{ display:'flex',gap:'18px',justifyContent:'center' }}>
         {UNO_COLORS.map(color => (
-          <motion.button
-            key={color}
-            whileHover={{ scale: 1.15, y: -5 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => onSelect(color)}
+          <motion.button key={color} whileHover={{ scale:1.2,y:-8 }} whileTap={{ scale:0.9 }} onClick={() => onSelect(color)}
             style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: COLOR_HEX[color],
-              border: '4px solid white',
-              boxShadow: `0 8px 25px ${COLOR_HEX[color]}88`,
-              cursor: 'pointer', fontSize: '1.5rem',
+              width:'70px',height:'70px',borderRadius:'50%',
+              background: CARD_COLORS[color]?.bg || '#333',
+              border:'3px solid white', cursor:'pointer',
+              boxShadow:`0 8px 25px ${CARD_COLORS[color]?.glow || '#fff'}88`,
             }}
           />
         ))}
       </div>
-    </div>
+    </motion.div>
   </motion.div>
 );
 
-// ─── Görev Modal (görev kartı atıldığında) ───────────────────────────────────
-const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, onClose }) => {
-  const taskData = card?.taskData;
+// ─── Zoom Overlay ─────────────────────────────────────────────────────────────
+const ZoomOverlay = ({ card, onClose }) => {
+  if (!card) return null;
   return (
     <motion.div
-      initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0, opacity: 0 }}
-      style={{
-        position: 'fixed', inset: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', background: 'rgba(0,0,0,0.85)',
-        backdropFilter: 'blur(8px)', zIndex: 100, padding: '20px',
-      }}
+      initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+      onClick={onClose}
+      style={{ position:'fixed',inset:0,zIndex:290, background:'rgba(0,0,0,0.88)',backdropFilter:'blur(10px)', display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'20px',padding:'20px' }}
     >
-      <div style={{
-        background: 'white', borderRadius: '28px', padding: '28px',
-        maxWidth: '380px', width: '100%', textAlign: 'center',
-        border: `4px solid ${isAttacker ? '#ff7900' : '#9d4edd'}`,
-        boxShadow: '0 30px 60px rgba(0,0,0,0.6)',
-      }}>
-        <div style={{ fontSize: '3rem', marginBottom: '8px' }}>
-          {isAttacker ? '🔥' : opponentAvatar}
-        </div>
-        <h3 style={{
-          color: isAttacker ? '#ff7900' : '#9d4edd',
-          fontSize: '1.1rem', fontWeight: '900', marginBottom: '6px'
-        }}>
-          {isAttacker
-            ? `${opponentName} için Görev!`
-            : 'Sana Görev Geldi! 🎯'
-          }
-        </h3>
+      <motion.div
+        initial={{ scale:0.5,y:80,opacity:0 }} animate={{ scale:1,y:0,opacity:1 }} exit={{ scale:0.5,opacity:0 }}
+        transition={{ type:'spring',bounce:0.35 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <UnoCard card={card} size="lg" shadow />
+      </motion.div>
 
-        <div style={{
-          background: '#f9f9f9', borderRadius: '16px', padding: '16px',
-          margin: '16px 0', border: '2px solid #eee'
-        }}>
-          {taskData?.title && (
-            <p style={{ fontWeight: '900', fontSize: '1.2rem', color: '#111', marginBottom: '8px' }}>
-              {taskData.title}
-            </p>
-          )}
-          <p style={{ color: '#444', lineHeight: 1.6, fontSize: '1rem' }}>
-            {taskData?.text}
-          </p>
+      {card.type === CARD_TYPES.TASK && card.taskData && (
+        <motion.div
+          initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.15 }}
+          onClick={e => e.stopPropagation()}
+          style={{ background:'rgba(255,255,255,0.97)', borderRadius:'20px', padding:'20px 22px', maxWidth:'320px', width:'100%', textAlign:'center', border:'3px solid rgba(220,30,0,0.5)' }}
+        >
+          <div style={{ fontSize:'1.5rem',marginBottom:'8px' }}>🔥</div>
+          <h3 style={{ color:'#c62828',fontWeight:'900',fontSize:'1.1rem',marginBottom:'8px' }}>{card.taskData.title}</h3>
+          <p style={{ color:'#444',lineHeight:1.6,fontSize:'0.93rem',marginBottom:'14px' }}>{card.taskData.text}</p>
+          <div style={{ display:'flex',justifyContent:'center',gap:'6px',flexWrap:'wrap',fontSize:'0.78rem' }}>
+            <span style={{ background:'#e8f5e9',color:'#2e7d32',padding:'3px 8px',borderRadius:'8px',fontWeight:'700' }}>✅ Yapar: +{card.penaltyDo} kart</span>
+            <span style={{ background:'#fff3e0',color:'#e65100',padding:'3px 8px',borderRadius:'8px',fontWeight:'700' }}>😅 Yapamaz: +{card.penaltyFail} kart</span>
+            <span style={{ background:'#fce4ec',color:'#c62828',padding:'3px 8px',borderRadius:'8px',fontWeight:'700' }}>🚫 Reddeder: +{card.penaltyRefuse} kart</span>
+          </div>
+        </motion.div>
+      )}
+      <p style={{ color:'rgba(255,255,255,0.4)',fontSize:'0.82rem' }}>Kapatmak için dokun</p>
+    </motion.div>
+  );
+};
+
+// ─── Görev Modal (bottom sheet) ───────────────────────────────────────────────
+const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, onClose }) => {
+  if (!card?.taskData) return null;
+  return (
+    <motion.div
+      initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+      style={{ position:'fixed',inset:0,zIndex:280, display:'flex',alignItems:'flex-end',justifyContent:'center', background:'rgba(0,0,0,0.82)',backdropFilter:'blur(8px)',padding:'0 0 env(safe-area-inset-bottom,0px)' }}
+    >
+      <motion.div
+        initial={{ y:320,opacity:0 }} animate={{ y:0,opacity:1 }} exit={{ y:320,opacity:0 }}
+        transition={{ type:'spring',bounce:0.3 }}
+        style={{ background:'white',borderRadius:'28px 28px 0 0',padding:'28px 22px 32px',maxWidth:'440px',width:'100%', border: isAttacker?'3px solid #ff7900':'3px solid #9d4edd', borderBottom:'none' }}
+      >
+        <div style={{ textAlign:'center',marginBottom:'18px' }}>
+          <div style={{ fontSize:'2.5rem',marginBottom:'8px' }}>{isAttacker ? '⚔️' : opponentAvatar}</div>
+          <h3 style={{ color:isAttacker?'#ff7900':'#9d4edd',fontSize:'1.2rem',fontWeight:'900' }}>
+            {isAttacker ? `${opponentName}'a Görev!` : '🎯 Sana Görev Geldi!'}
+          </h3>
+        </div>
+        <div style={{ background:'#fff8f0',borderRadius:'16px',padding:'14px 18px',border:'2px solid rgba(255,121,0,0.2)',marginBottom:'14px' }}>
+          <p style={{ fontWeight:'900',fontSize:'1.05rem',color:'#c62828',marginBottom:'7px' }}>{card.taskData.title}</p>
+          <p style={{ color:'#555',lineHeight:1.6,fontSize:'0.92rem' }}>{card.taskData.text}</p>
+        </div>
+        <div style={{ background:'#f5f5f5',borderRadius:'10px',padding:'10px',marginBottom:'18px',fontSize:'0.78rem',color:'#666',textAlign:'center' }}>
+          ✅ Yapar: <strong style={{ color:'#2e7d32' }}>+{card.penaltyDo} kart</strong>
+          &nbsp;|&nbsp;
+          😅 Yapamaz: <strong style={{ color:'#e65100' }}>+{card.penaltyFail} kart</strong>
+          &nbsp;|&nbsp;
+          🚫 Reddeder: <strong style={{ color:'#c62828' }}>+{card.penaltyRefuse} kart</strong>
         </div>
 
-        <div style={{
-          background: '#fff3e0', borderRadius: '12px', padding: '12px',
-          marginBottom: '20px', border: '1px solid #ffcc80'
-        }}>
-          <p style={{ color: '#e65100', fontSize: '0.85rem', fontWeight: '700', margin: 0 }}>
-            ✅ Yaparsa: <strong>+{card?.penaltyDo} kart</strong> çeker &nbsp;|&nbsp;
-            ❌ Yapamazsa: <strong>+{card?.penaltyFail} kart</strong> çeker &nbsp;|&nbsp;
-            🚫 Reddederse: <strong>+{card?.penaltyRefuse} kart</strong> çeker
-          </p>
-        </div>
-
-        {/* Saldırgan: görevi gönder */}
         {isAttacker && (
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={onClose}
-            style={{
-              width: '100%', padding: '16px',
-              background: 'linear-gradient(135deg, #ff7900, #f5af19)',
-              color: 'white', border: 'none', borderRadius: '14px',
-              fontWeight: '900', fontSize: '1rem', cursor: 'pointer',
-            }}
-          >
+          <motion.button whileTap={{ scale:0.95 }} onClick={onClose}
+            style={{ width:'100%',padding:'15px',background:'linear-gradient(135deg,#ff7900,#f5af19)',color:'white',border:'none',borderRadius:'15px',fontWeight:'900',fontSize:'1rem',cursor:'pointer' }}>
             ⚡ Görevi Gönder!
           </motion.button>
         )}
-
-        {/* Savunan: yap / yapamadım / reddet */}
         {!isAttacker && onResult && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => onResult('done')}
-              style={{ padding: '14px', background: '#2b9348', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
-              ✅ Yaptım! (+{card?.penaltyDo} kart)
+          <div style={{ display:'flex',flexDirection:'column',gap:'9px' }}>
+            <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
+              style={{ padding:'13px',background:'#2e7d32',color:'white',border:'none',borderRadius:'13px',fontWeight:'900',cursor:'pointer',fontSize:'0.93rem' }}>
+              ✅ Yaptım! (+{card.penaltyDo} kart)
             </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => onResult('fail')}
-              style={{ padding: '14px', background: '#ff9800', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
-              😅 Yapamadım (+{card?.penaltyFail} kart)
+            <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('fail')}
+              style={{ padding:'13px',background:'#e65100',color:'white',border:'none',borderRadius:'13px',fontWeight:'900',cursor:'pointer',fontSize:'0.93rem' }}>
+              😅 Yapamadım (+{card.penaltyFail} kart)
             </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => onResult('refuse')}
-              style={{ padding: '14px', background: '#d00000', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
-              🚫 Reddediyorum (+{card?.penaltyRefuse} kart)
+            <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('refuse')}
+              style={{ padding:'13px',background:'#c62828',color:'white',border:'none',borderRadius:'13px',fontWeight:'900',cursor:'pointer',fontSize:'0.93rem' }}>
+              🚫 Reddediyorum (+{card.penaltyRefuse} kart)
             </motion.button>
           </div>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 };
 
-// ─── UNO Kartı Bileşeni ───────────────────────────────────────────────────────
-const UnoCard = ({ card, onClick, isPlayable, isSmall, style }) => {
-  if (!card) return null;
-
-  const isTask = card.type === CARD_TYPES.TASK;
-  const isWild = card.type === CARD_TYPES.WILD;
-  const isSpecial = isTask || isWild || card.type === CARD_TYPES.SKIP || card.type === CARD_TYPES.REVERSE;
-
-  const bgColor = isTask
-    ? 'linear-gradient(135deg, #1a0033, #3c0060)'
-    : isWild
-    ? 'linear-gradient(135deg, #1a1a2e, #16213e)'
-    : `linear-gradient(135deg, ${COLOR_HEX[card.color]}, ${COLOR_DARK[card.color]})`;
-
-  const cardW = isSmall ? 'clamp(38px,10vw,52px)' : 'clamp(52px,14vw,70px)';
-  const cardH = isSmall ? 'clamp(56px,15vw,76px)' : 'clamp(76px,20vw,104px)';
-
-  return (
+// ─── Çekilen kart önizleme ────────────────────────────────────────────────────
+const DrawnCardPreview = ({ card, onDismiss }) => (
+  <motion.div
+    initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+    onClick={onDismiss}
+    style={{ position:'fixed',inset:0,zIndex:270, display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'20px', background:'rgba(0,0,0,0.78)',backdropFilter:'blur(8px)' }}
+  >
     <motion.div
-      whileHover={isPlayable ? { y: -12, scale: 1.08 } : {}}
-      whileTap={isPlayable ? { scale: 0.92 } : {}}
-      onClick={isPlayable ? onClick : undefined}
-      style={{
-        width: cardW, height: cardH, borderRadius: isSmall ? '8px' : '12px',
-        background: bgColor,
-        border: isPlayable
-          ? '3px solid rgba(255,255,255,0.9)'
-          : '2px solid rgba(255,255,255,0.2)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', cursor: isPlayable ? 'pointer' : 'default',
-        boxShadow: isPlayable
-          ? '0 8px 24px rgba(255,255,255,0.3)'
-          : '0 3px 8px rgba(0,0,0,0.4)',
-        transition: 'border 0.2s, box-shadow 0.2s',
-        flexShrink: 0,
-        position: 'relative',
-        overflow: 'hidden',
-        ...style,
-      }}
+      initial={{ scale:0,y:180,rotate:-8 }} animate={{ scale:1,y:0,rotate:0 }} exit={{ scale:0.4,y:-120,opacity:0 }}
+      transition={{ type:'spring',bounce:0.4 }}
+      style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:'16px' }}
     >
-      {/* Oval dekor */}
-      {!isTask && (
-        <div style={{
-          position: 'absolute', width: '130%', height: '70%',
-          background: 'rgba(255,255,255,0.15)', borderRadius: '50%',
-          transform: 'rotate(-30deg)',
-        }} />
-      )}
-
-      {isTask ? (
-        <>
-          <span style={{ fontSize: isSmall ? '0.9rem' : '1.2rem', zIndex: 1 }}>🔥</span>
-          <span style={{
-            color: 'white', fontWeight: '900', fontSize: isSmall ? '0.55rem' : '0.75rem',
-            zIndex: 1, marginTop: '2px', textAlign: 'center', letterSpacing: '0.5px',
-            textShadow: '0 1px 4px rgba(0,0,0,0.8)',
-          }}>GÖREV</span>
-          <span style={{
-            color: '#ffcc00', fontWeight: '900', fontSize: isSmall ? '0.7rem' : '0.95rem',
-            zIndex: 1, textShadow: '0 1px 4px rgba(0,0,0,0.8)',
-          }}>{card.display}</span>
-        </>
-      ) : isWild ? (
-        <span style={{ fontSize: isSmall ? '1.1rem' : '1.5rem', zIndex: 1 }}>🌈</span>
-      ) : (
-        <>
-          {/* Sol üst */}
-          <span style={{
-            position: 'absolute', top: isSmall ? '3px' : '5px', left: isSmall ? '4px' : '7px',
-            color: 'white', fontWeight: '900', fontSize: isSmall ? '0.6rem' : '0.8rem',
-            textShadow: '0 1px 3px rgba(0,0,0,0.5)', lineHeight: 1, zIndex: 1,
-          }}>{card.display}</span>
-          {/* Merkez */}
-          <span style={{
-            color: 'white', fontWeight: '900', fontSize: isSmall ? '1.1rem' : '1.7rem',
-            textShadow: '0 2px 6px rgba(0,0,0,0.4)', zIndex: 1,
-          }}>{card.display}</span>
-          {/* Sağ alt */}
-          <span style={{
-            position: 'absolute', bottom: isSmall ? '3px' : '5px', right: isSmall ? '4px' : '7px',
-            color: 'white', fontWeight: '900', fontSize: isSmall ? '0.6rem' : '0.8rem',
-            textShadow: '0 1px 3px rgba(0,0,0,0.5)', lineHeight: 1, zIndex: 1,
-            transform: 'rotate(180deg)',
-          }}>{card.display}</span>
-        </>
-      )}
-
-      {/* Oynanabilir parlaması */}
-      {isPlayable && (
-        <motion.div
-          animate={{ opacity: [0.4, 0.8, 0.4] }}
-          transition={{ duration: 1.2, repeat: Infinity }}
-          style={{
-            position: 'absolute', inset: 0, borderRadius: 'inherit',
-            background: 'rgba(255,255,255,0.15)',
-          }}
-        />
-      )}
+      <p style={{ color:'rgba(255,255,255,0.85)',fontWeight:'900',fontSize:'1.1rem',textAlign:'center' }}>🃏 Kart Çektin!</p>
+      <UnoCard card={card} size="lg" shadow />
+      <p style={{ color:'rgba(255,255,255,0.38)',fontSize:'0.8rem' }}>Devam etmek için dokun</p>
     </motion.div>
-  );
-};
-
-// ─── Kart Arkası (rakibin kartları) ──────────────────────────────────────────
-const CardBack = ({ count, color = '#9d4edd' }) => (
-  <div style={{ display: 'flex', position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-    {[...Array(Math.min(count, 5))].map((_, i) => (
-      <div
-        key={i}
-        style={{
-          width: 'clamp(36px,9vw,48px)', height: 'clamp(54px,14vw,72px)',
-          borderRadius: '8px',
-          background: 'linear-gradient(135deg, #2d1b4e, #1a0033)',
-          border: '2px solid rgba(157,78,221,0.5)',
-          marginLeft: i === 0 ? 0 : '-22px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: i,
-          backgroundImage: 'repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,0.03) 6px,rgba(255,255,255,0.03) 12px)',
-        }}
-      >
-        {i === 0 && <span style={{ fontSize: '0.9rem' }}>🔥</span>}
-      </div>
-    ))}
-    {count > 5 && (
-      <span style={{
-        marginLeft: '8px', color: 'rgba(255,255,255,0.7)',
-        fontSize: '0.85rem', fontWeight: '900',
-      }}>+{count - 5}</span>
-    )}
-  </div>
+  </motion.div>
 );
 
-// ─── Ana Bileşen ──────────────────────────────────────────────────────────────
+// ─── Ana bileşen ──────────────────────────────────────────────────────────────
 const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const { localPlayer, sendData, onData, role } = useMultiplayer();
-
-  // Host oyunu başlatır ve desteler sync edilir
+  const theme = THEMES[localPlayer] || THEMES.woman;
   const opponentGender = localPlayer === 'woman' ? 'man' : 'woman';
 
-  // Oyun durumu
-  const [myHand,       setMyHand]       = useState([]);
-  const [theirHand,    setTheirHand]    = useState([]); // Kapalı gösterim için sayı yeterli
-  const [theirCount,   setTheirCount]   = useState(0);
-  const [drawPile,     setDrawPile]     = useState([]);
-  const [discardPile,  setDiscardPile]  = useState([]);
-  const [topCard,      setTopCard]      = useState(null);
-  const [currentColor, setCurrentColor] = useState('kırmızı');
-  const [isMyTurn,     setIsMyTurn]     = useState(false);
-  const [gameStarted,  setGameStarted]  = useState(false);
+  // ── Oyun durumu ────────────────────────────────────────────────────────────
+  const [myHand,        setMyHand]        = useState([]);
+  const [theirCount,    setTheirCount]    = useState(0);
+  const [topCard,       setTopCard]       = useState(null);
+  const [currentColor,  setCurrentColor]  = useState('kırmızı');
+  const [isMyTurn,      setIsMyTurn]      = useState(false);
+  const [gameStarted,   setGameStarted]   = useState(false);
 
-  // UI durumu
+  // ── UI durumu ─────────────────────────────────────────────────────────────
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [pendingCard,     setPendingCard]     = useState(null); // Wild atarken bekleyen kart
-  const [taskModal,       setTaskModal]       = useState(null); // { card, isAttacker }
-  const [pendingTaskCard, setPendingTaskCard] = useState(null); // Atılmış görev kartı, sonuç bekleniyor
-  const [notification,   setNotification]    = useState(null); // Üst banner
-  const [gameOver,        setGameOver]        = useState(null); // { winner, scores }
-  const [animCard,        setAnimCard]        = useState(null); // Atılan kart animasyonu
-  const [drawAnim,        setDrawAnim]        = useState(false);
+  const [pendingCard,     setPendingCard]     = useState(null);
+  const [taskModal,       setTaskModal]       = useState(null);
+  const [pendingTaskCard, setPendingTaskCard] = useState(null);
+  const [notification,   setNotification]    = useState(null);
+  const [zoomedCard,      setZoomedCard]      = useState(null);
+  const [drawnCard,       setDrawnCard]       = useState(null);
+  const [animCard,        setAnimCard]        = useState(null);
+  const [gameOver,        setGameOver]        = useState(null);
 
-  const drawPileRef = useRef([]);
+  // ── Portal sürükleme durumu ────────────────────────────────────────────────
+  const [cardPortal,     setCardPortal]     = useState(null); // { card, idx, startX, startY, w, h }
+  const [portalCanPlay,  setPortalCanPlay]  = useState(false);
+  const portalY       = useMotionValue(0);
+  const portalX       = useMotionValue(0);
+  const longPressRef  = useRef(null);
+  const dragStartY    = useRef(0);
+  const dragMoved     = useRef(false);
 
-  const showNotif = (msg, color = '#9d4edd') => {
+  const notifTimer = useRef(null);
+  const showNotif = useCallback((msg, color = '#9d4edd') => {
+    if (notifTimer.current) clearTimeout(notifTimer.current);
     setNotification({ msg, color });
-    setTimeout(() => setNotification(null), 3000);
-  };
+    notifTimer.current = setTimeout(() => setNotification(null), 3000);
+  }, []);
 
-  // ─── Host oyunu başlatır ────────────────────────────────────────────────────
+  // ── Oyun başlangıcı ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!localPlayer || gameStarted) return;
-
     if (role === 'host') {
-      // Host desteyi oluşturur ve guest'e gönderir
-      const deckSize = settings.deckSize || 7;
+      const deckSize  = settings.deckSize || 7;
       const taskCount = settings.taskCardCount ?? 3;
       const dealt = dealGame(deckSize, taskCount, localPlayer, MOCK_CARDS);
 
       setMyHand(dealt.myHand);
       setTheirCount(dealt.theirHand.length);
-      setDrawPile(dealt.drawPile);
-      drawPileRef.current = dealt.drawPile;
-      setDiscardPile([dealt.topCard]);
       setTopCard(dealt.topCard);
       setCurrentColor(dealt.topCard.color);
 
-      // Rastgele kim başlar
-      const starterIsHost = Math.random() < 0.5;
-      setIsMyTurn(starterIsHost);
+      const hostStarts = Math.random() < 0.5;
+      setIsMyTurn(hostStarts);
       setGameStarted(true);
 
-      // Guest'e elleri ve başlangıç bilgisi gönder
       sendData({
         type: 'gameInit',
-        theirHand: dealt.theirHand, // Guest'in eli (kendi kartları)
-        myHandCount: dealt.myHand.length, // Host'un el sayısı
-        drawPile: dealt.drawPile,
+        theirHand: dealt.theirHand,
+        myHandCount: dealt.myHand.length,
         topCard: dealt.topCard,
         currentColor: dealt.topCard.color,
-        hostStarts: starterIsHost,
+        hostStarts,
       });
     }
-    // Guest gameInit mesajı bekliyor
-  }, [localPlayer, role, gameStarted]);
+  }, [localPlayer, role, gameStarted, settings, sendData]);
 
-  // ─── Data Sync ──────────────────────────────────────────────────────────────
+  // ── Data handler ───────────────────────────────────────────────────────────
   const handleData = useCallback((data) => {
     switch (data.type) {
-
       case 'gameInit':
-        // Guest tarafı: host'tan başlangıç verisi geldi
-        setMyHand(data.theirHand); // Benim elim
-        setTheirCount(data.myHandCount); // Host'un el sayısı
-        setDrawPile(data.drawPile);
-        drawPileRef.current = data.drawPile;
-        setDiscardPile([data.topCard]);
+        setMyHand(data.theirHand);
+        setTheirCount(data.myHandCount);
         setTopCard(data.topCard);
         setCurrentColor(data.currentColor);
-        setIsMyTurn(!data.hostStarts); // Host başlıyorsa ben başlamıyorum
+        setIsMyTurn(!data.hostStarts);
         setGameStarted(true);
         break;
 
       case 'cardPlayed':
-        // Rakip kart attı
         setTopCard(data.card);
         setCurrentColor(data.newColor);
-        setDiscardPile(prev => [...prev, data.card]);
         setTheirCount(data.handCount);
         setAnimCard(data.card);
-        setTimeout(() => setAnimCard(null), 600);
+        setTimeout(() => setAnimCard(null), 700);
 
+        if (data.handCount === 0) { setGameOver({ iWon: false }); return; }
         if (data.card.type === CARD_TYPES.SKIP || data.card.type === CARD_TYPES.REVERSE) {
-          // Beni atla → sıra yine rakipte
           setIsMyTurn(false);
-          showNotif(`${players[opponentGender]?.name} sıranı atladı! 🚫`, '#e63946');
+          showNotif(`${players[opponentGender]?.name} sıranı atladı! ⊘`, '#c62828');
           return;
         }
         if (data.card.type === CARD_TYPES.TASK) {
-          // Rakip bana görev kartı attı → modal aç (savunan benim)
           setPendingTaskCard(data.card);
           setTaskModal({ card: data.card, isAttacker: false });
-          return; // Sıra geçişi görev sonucuna göre olacak
+          return;
         }
         setIsMyTurn(true);
         break;
 
       case 'taskResult':
-        // Görev sonucu (rakip gönderdi): kaç kart çekeceğimi öğrendim
         {
-          const penalty = data.penalty;
-          const newCards = drawCards(penalty);
+          const newCards = Array.from({ length: data.penalty }, () => getRandomCard());
           setMyHand(prev => [...prev, ...newCards]);
           setTaskModal(null);
           setPendingTaskCard(null);
-          showNotif(`Görev: ${data.resultLabel} → ${penalty} kart çektin!`, '#ff9800');
-          // Artık sıra rakipte (bende değil - rakip attı, ben sonucu verdim)
+          showNotif(`${data.resultLabel} → ${data.penalty} kart çektin!`, '#ff9800');
           setIsMyTurn(false);
-          // Rakibe sıra geçtiğini söyle
-          sendData({ type: 'turnPass', toOpponent: false });
         }
         break;
 
       case 'cardDrawn':
-        // Rakip kart çekti
         setTheirCount(data.handCount);
+        setIsMyTurn(true);
         break;
 
       case 'turnPass':
         setIsMyTurn(true);
         break;
 
-      case 'drawCards':
-        // Bana kart çektirme (Skip haricinde)
-        {
-          const newCards = drawCards(data.count);
-          setMyHand(prev => [...prev, ...newCards]);
-          showNotif(`${data.count} kart çektin!`, '#e63946');
-        }
-        break;
-
-      case 'syncDrawPile':
-        setDrawPile(data.pile);
-        drawPileRef.current = data.pile;
-        break;
-
       case 'gameOver':
-        setGameOver(data);
+        setGameOver({ iWon: false });
         break;
 
-      default:
-        break;
+      default: break;
     }
-  }, [opponentGender, players]);
+  }, [opponentGender, players, showNotif]);
 
   useEffect(() => {
     const unsub = onData(handleData);
     return unsub;
   }, [onData, handleData]);
 
-  // ─── Desteden kart çek ──────────────────────────────────────────────────────
-  const drawCards = (count) => {
-    const pile = drawPileRef.current;
-    if (pile.length < count) {
-      // Desteyi bitirdik, discard'dan yenile
-      return [];
-    }
-    const drawn = pile.slice(0, count);
-    const remaining = pile.slice(count);
-    drawPileRef.current = remaining;
-    setDrawPile(remaining);
-    return drawn;
-  };
-
-  // ─── Kart oyna ──────────────────────────────────────────────────────────────
-  const playCard = (card, idx) => {
-    if (!isMyTurn) return;
+  // ── Kart oyna ─────────────────────────────────────────────────────────────
+  const playCard = useCallback((card, idx) => {
+    if (!isMyTurn) { showNotif('Sıra sende değil! ⏳', '#666'); return; }
     if (!canPlayCard(card, topCard, currentColor)) {
-      showNotif('Bu kartı atamazsın! 🚫', '#e63946');
-      return;
+      showNotif('Bu kartı atamazsın! 🚫', '#c62828'); return;
     }
-
-    // Wild veya görev kartı: önce renk seç (görev kartı renk seçmez - her renge atılır)
     if (card.type === CARD_TYPES.WILD) {
       setPendingCard({ card, idx });
       setShowColorPicker(true);
       return;
     }
+    doPlay(card, idx, card.color);
+  }, [isMyTurn, topCard, currentColor]);
 
-    doPlayCard(card, idx, card.color);
-  };
-
-  const doPlayCard = (card, idx, chosenColor) => {
+  const doPlay = useCallback((card, idx, chosenColor) => {
     const newHand = myHand.filter((_, i) => i !== idx);
     setMyHand(newHand);
-
     const newColor = chosenColor || card.color;
     setTopCard(card);
     setCurrentColor(newColor);
-    setDiscardPile(prev => [...prev, card]);
     setAnimCard(card);
-    setTimeout(() => setAnimCard(null), 600);
+    setTimeout(() => setAnimCard(null), 700);
 
-    // Rakibe bildir
-    sendData({
-      type: 'cardPlayed',
-      card,
-      newColor,
-      handCount: newHand.length,
-    });
+    sendData({ type: 'cardPlayed', card, newColor, handCount: newHand.length });
 
-    // Kazandın mı?
     if (newHand.length === 0) {
-      endGame(true);
+      sendData({ type: 'gameOver' });
+      setGameOver({ iWon: true });
       return;
     }
-
-    // Görev kartı: modal aç, saldırgan benim
     if (card.type === CARD_TYPES.TASK) {
       setPendingTaskCard(card);
       setTaskModal({ card, isAttacker: true });
-      setIsMyTurn(false); // Görev sonucunu bekle
+      setIsMyTurn(false);
       return;
     }
-
-    // Skip veya Reverse (2 kişide aynı): sıra tekrar bende
     if (card.type === CARD_TYPES.SKIP || card.type === CARD_TYPES.REVERSE) {
-      showNotif('Sırayı atladın! 🚫 Tekrar sen oynarsın.', '#4361ee');
-      // isMyTurn zaten true kalacak
+      showNotif('Sırayı atladın! ⊘ Tekrar oynarsın.', '#1565c0');
       return;
     }
-
     setIsMyTurn(false);
-  };
+  }, [myHand, sendData, showNotif]);
 
-  const handleColorSelected = (color) => {
+  const handleColorSelect = (color) => {
     setShowColorPicker(false);
     if (!pendingCard) return;
-    doPlayCard(pendingCard.card, pendingCard.idx, color);
+    doPlay(pendingCard.card, pendingCard.idx, color);
     setPendingCard(null);
   };
 
-  // ─── Kart çek (sıram varsa) ────────────────────────────────────────────────
-  const handleDrawCard = () => {
-    if (!isMyTurn) return;
-    const [drawn] = drawCards(1);
-    if (!drawn) {
-      showNotif('Destede kart kalmadı!', '#888');
-      return;
-    }
-    const newHand = [...myHand, drawn];
-    setMyHand(newHand);
-    setDrawAnim(true);
-    setTimeout(() => setDrawAnim(false), 500);
-    sendData({ type: 'cardDrawn', handCount: newHand.length });
+  // ── Kart çek ─────────────────────────────────────────────────────────────
+  const handleDraw = useCallback(() => {
+    if (!isMyTurn) { showNotif('Sıra sende değil! ⏳', '#666'); return; }
+    const card = getRandomCard();
+    setDrawnCard(card);
+  }, [isMyTurn, showNotif]);
+
+  const confirmDrawn = useCallback(() => {
+    if (!drawnCard) return;
+    const card = drawnCard;
+    setDrawnCard(null);
+    setMyHand(prev => {
+      const newHand = [...prev, card];
+      sendData({ type: 'cardDrawn', handCount: newHand.length });
+      return newHand;
+    });
     setIsMyTurn(false);
     sendData({ type: 'turnPass' });
-  };
+  }, [drawnCard, sendData]);
 
-  // ─── Görev sonucu (savunan) ────────────────────────────────────────────────
-  const handleTaskResult = (result) => {
+  // ── Görev sonucu ──────────────────────────────────────────────────────────
+  const handleTaskResult = useCallback((result) => {
     if (!pendingTaskCard) return;
     const card = pendingTaskCard;
-    let penalty;
-    let label;
-    if (result === 'done')   { penalty = card.penaltyDo;     label = 'Yaptın'; }
-    if (result === 'fail')   { penalty = card.penaltyFail;   label = 'Yapamadın'; }
-    if (result === 'refuse') { penalty = card.penaltyRefuse; label = 'Reddettin'; }
+    const penalty = result === 'done' ? card.penaltyDo : result === 'fail' ? card.penaltyFail : card.penaltyRefuse;
+    const label   = result === 'done' ? 'Yaptın' : result === 'fail' ? 'Yapamadın' : 'Reddettin';
 
-    // Kart çek
-    const newCards = drawCards(penalty);
+    const newCards = Array.from({ length: penalty }, () => getRandomCard());
     setMyHand(prev => [...prev, ...newCards]);
     setTaskModal(null);
     setPendingTaskCard(null);
     showNotif(`${label} → ${penalty} kart çektin!`, '#ff9800');
-
-    // Rakibe sonucu bildir
     sendData({ type: 'taskResult', result, penalty, resultLabel: label });
-
-    // Sıra rakibe geçti (o attı, biz sonucu verdik)
     setIsMyTurn(false);
-  };
+  }, [pendingTaskCard, sendData, showNotif]);
 
-  // ─── Oyun Sonu ─────────────────────────────────────────────────────────────
-  const endGame = (iWon) => {
-    // Kalan kartların puanı rakibe yazılır
-    const myScore = myHand.reduce((sum, c) => sum + cardScore(c), 0);
-    sendData({ type: 'gameOver', iWon: false, opponentScore: myScore });
-    setGameOver({ iWon, opponentScore: myScore });
-  };
+  // ── Portal sürükleme (kaydırarak oyna) ────────────────────────────────────
+  const startCardGesture = useCallback((card, idx, e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragStartY.current = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    dragMoved.current = false;
+    portalY.set(0);
+    portalX.set(0);
+    setPortalCanPlay(false);
 
-  // ─── Oyun Sonu Ekranı ───────────────────────────────────────────────────────
+    longPressRef.current = setTimeout(() => {
+      if (!dragMoved.current) {
+        // Uzun basma → zoom
+        setZoomedCard(card);
+      }
+    }, 480);
+
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setCardPortal({ card, idx, startX: rect.left, startY: rect.top, w: rect.width, h: rect.height });
+  }, [portalY, portalX]);
+
+  const moveCardGesture = useCallback((e) => {
+    if (!cardPortal) return;
+    const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+    const offsetY = clientY - (cardPortal.startY + cardPortal.h / 2);
+    const offsetX = clientX - (cardPortal.startX + cardPortal.w / 2);
+
+    if (Math.abs(offsetY) > 8 || Math.abs(offsetX) > 8) {
+      dragMoved.current = true;
+      clearTimeout(longPressRef.current);
+    }
+
+    const clampedY = Math.min(30, offsetY); // Allow slight downward but primarily up
+    portalY.set(clampedY);
+    portalX.set(offsetX * 0.4);
+    setPortalCanPlay(offsetY < -80);
+  }, [cardPortal, portalY, portalX]);
+
+  const endCardGesture = useCallback(() => {
+    clearTimeout(longPressRef.current);
+    if (!cardPortal) return;
+
+    if (portalCanPlay) {
+      // Uçuş animasyonu
+      mvAnimate(portalY, -500, { duration: 0.3, ease: 'easeIn' });
+      mvAnimate(portalX, 0, { duration: 0.2 });
+      setTimeout(() => {
+        playCard(cardPortal.card, cardPortal.idx);
+        setCardPortal(null);
+        portalY.set(0);
+        portalX.set(0);
+        setPortalCanPlay(false);
+      }, 260);
+    } else {
+      // Geri dön
+      mvAnimate(portalY, 0, { type: 'spring', stiffness: 400, damping: 28 });
+      mvAnimate(portalX, 0, { type: 'spring', stiffness: 400, damping: 28 });
+      setTimeout(() => {
+        setCardPortal(null);
+        setPortalCanPlay(false);
+      }, 320);
+    }
+  }, [cardPortal, portalCanPlay, playCard, portalY, portalX]);
+
+  // ── Oyun bitti ────────────────────────────────────────────────────────────
   if (gameOver) {
     return (
-      <div style={{
-        width: '100%', height: '100%',
-        background: 'radial-gradient(circle at center, #1a0033 0%, #050010 100%)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', padding: '24px',
-      }}>
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', bounce: 0.5 }}
-          style={{ textAlign: 'center' }}
-        >
-          <div style={{ fontSize: '5rem', marginBottom: '16px' }}>
-            {gameOver.iWon ? '🏆' : '💔'}
-          </div>
-          <h2 style={{
-            color: 'white', fontSize: '2.5rem', fontWeight: '900', marginBottom: '8px',
-            textShadow: gameOver.iWon ? '0 0 30px #f5af19' : '0 0 30px #9d4edd',
-          }}>
-            {gameOver.iWon ? 'KAZANDIN!' : 'KAYBETTİN!'}
+      <div style={{ width:'100%',height:'100%', background:theme.bg, display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px' }}>
+        <motion.div initial={{ scale:0,opacity:0 }} animate={{ scale:1,opacity:1 }} transition={{ type:'spring',bounce:0.5 }} style={{ textAlign:'center' }}>
+          <div style={{ fontSize:'5rem',marginBottom:'16px' }}>{gameOver.iWon ? '🏆' : '💔'}</div>
+          <h2 style={{ color:'white',fontSize:'2.5rem',fontWeight:'900',marginBottom:'12px',textShadow:`0 0 30px ${theme.accent}` }}>
+            {gameOver.iWon ? 'KAZANDIN! 🎉' : 'KAYBETTİN...'}
           </h2>
-          <p style={{ color: 'rgba(255,200,220,0.8)', fontSize: '1rem', marginBottom: '32px' }}>
-            {gameOver.iWon
-              ? `Rakibinin elinde ${gameOver.opponentScore || '?'} puan kaldı!`
-              : 'Tüm kartlarını bitir!'}
+          <p style={{ color:'rgba(255,255,255,0.55)',fontSize:'1rem',marginBottom:'32px' }}>
+            {gameOver.iWon ? 'Tüm kartlarını bitirdin!' : 'Rakibin tüm kartlarını bitirdi.'}
           </p>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={onFinish}
-            style={{
-              padding: '18px 48px',
-              background: 'linear-gradient(135deg, #9d4edd, #ff3c78)',
-              color: 'white', border: 'none', borderRadius: '20px',
-              fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
-              boxShadow: '0 8px 25px rgba(157,78,221,0.5)',
-            }}
-          >
+          <motion.button whileTap={{ scale:0.95 }} onClick={onFinish}
+            style={{ padding:'18px 48px', background:`linear-gradient(135deg,${theme.accent},${theme.secondary})`, color:'white',border:'none',borderRadius:'20px',fontWeight:'900',fontSize:'1.2rem',cursor:'pointer',boxShadow:`0 8px 25px ${theme.accentGlow}` }}>
             Ana Menü
           </motion.button>
         </motion.div>
@@ -609,258 +692,266 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     );
   }
 
-  // ─── Yükleniyor ─────────────────────────────────────────────────────────────
+  // ── Yükleniyor ────────────────────────────────────────────────────────────
   if (!gameStarted) {
     return (
-      <div style={{
-        width: '100%', height: '100%',
-        background: 'radial-gradient(circle at center, #1a0033 0%, #050010 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <motion.div
-            animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-            style={{ fontSize: '4rem', marginBottom: '20px' }}
-          >🃏</motion.div>
-          <p style={{ color: 'white', fontWeight: '700', fontSize: '1.1rem' }}>
-            Desteler dağıtılıyor...
-          </p>
+      <div style={{ width:'100%',height:'100%', background:theme.bg, display:'flex',alignItems:'center',justifyContent:'center' }}>
+        <div style={{ textAlign:'center' }}>
+          <motion.div animate={{ rotate:360 }} transition={{ duration:1.2,repeat:Infinity,ease:'linear' }} style={{ fontSize:'4rem',marginBottom:'20px' }}>🃏</motion.div>
+          <p style={{ color:'white',fontWeight:'700',fontSize:'1.1rem' }}>Desteler hazırlanıyor...</p>
         </div>
       </div>
     );
   }
 
-  // ─── Renkler ─────────────────────────────────────────────────────────────────
-  const colorHex   = COLOR_HEX[currentColor] || '#9d4edd';
-  const activeBg   = `radial-gradient(circle at top, ${colorHex}33 0%, #1a0033 70%)`;
-
-  // Oynanabilir kartlar
-  const playableIndices = isMyTurn
-    ? myHand.map((c, i) => canPlayCard(c, topCard, currentColor) ? i : -1).filter(i => i >= 0)
-    : [];
+  // ── Renk glow ─────────────────────────────────────────────────────────────
+  const colorGlow = CARD_COLORS[currentColor]?.glow || '#fff';
 
   return (
-    <div style={{
-      width: '100%', height: '100%',
-      background: activeBg, transition: 'background 0.8s ease',
-      display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
-    }}>
+    <div style={{ width:'100%',height:'100%', background:theme.bg, display:'flex',flexDirection:'column',position:'relative' }}>
 
-      {/* ── Arka plan dekor ────────────────────────────────────────────────── */}
-      <motion.div animate={{ y: [0,-20,0], rotate:[0,10,-10,0] }} transition={{ duration:6, repeat:Infinity }}
-        style={{ position:'absolute', top:'8%', left:'5%', fontSize:'2.5rem', opacity:0.1, pointerEvents:'none' }}>💋</motion.div>
-      <motion.div animate={{ y: [0,20,0], rotate:[0,-15,15,0] }} transition={{ duration:7, repeat:Infinity }}
-        style={{ position:'absolute', bottom:'25%', right:'8%', fontSize:'2.5rem', opacity:0.1, pointerEvents:'none' }}>🔥</motion.div>
+      {/* Renk arka ışık */}
+      <div style={{
+        position:'absolute', top:'-80px', left:'50%', transform:'translateX(-50%)',
+        width:'400px', height:'400px', borderRadius:'50%',
+        background:`radial-gradient(circle,${colorGlow}20 0%,transparent 70%)`,
+        pointerEvents:'none', transition:'background 1s ease',
+      }}/>
 
-      {/* ── Bildirim banner ────────────────────────────────────────────────── */}
+      {/* Yüzen arka plan emojileri */}
+      {theme.float.map((f, i) => (
+        <motion.div key={i}
+          animate={{ y:[0,-25+i*8,0], opacity:[0.07,0.2,0.07], rotate:[0,8*(i%2?1:-1),0] }}
+          transition={{ duration:f.d, repeat:Infinity, delay:i*1.2 }}
+          style={{ position:'absolute', top:f.t, left:f.x, fontSize:'2.8rem', pointerEvents:'none' }}
+        >{f.e}</motion.div>
+      ))}
+
+      {/* ── Bildirim ────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {notification && (
           <motion.div
-            initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }}
+            initial={{ y:-60,opacity:0 }} animate={{ y:0,opacity:1 }} exit={{ y:-60,opacity:0 }}
             style={{
-              position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)',
-              background: notification.color, color: 'white',
-              padding: '10px 24px', borderRadius: '30px', zIndex: 30,
-              fontWeight: '900', fontSize: '0.95rem', whiteSpace: 'nowrap',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.5)', border: '2px solid white',
+              position:'fixed', top:12, left:'50%', transform:'translateX(-50%)', zIndex:200,
+              background:notification.color, color:'white',
+              padding:'10px 24px', borderRadius:'30px',
+              fontWeight:'900', fontSize:'0.93rem', whiteSpace:'nowrap',
+              boxShadow:'0 6px 20px rgba(0,0,0,0.5)', border:'2px solid rgba(255,255,255,0.35)',
             }}
           >{notification.msg}</motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── RAKİP ALANI (üst) ──────────────────────────────────────────────── */}
-      <div style={{
-        padding: '12px 16px 8px', display: 'flex',
-        flexDirection: 'column', alignItems: 'center', gap: '8px',
-      }}>
-        {/* Rakip isim / sıra göstergesi */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          background: !isMyTurn ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)',
-          borderRadius: '20px', padding: '8px 18px',
-          border: !isMyTurn ? `2px solid ${colorHex}` : '2px solid transparent',
-          transition: 'all 0.3s',
-        }}>
-          <span style={{ fontSize: '1.2rem' }}>{players[opponentGender]?.avatar}</span>
-          <span style={{ color: 'white', fontWeight: '900', fontSize: '0.95rem' }}>
-            {players[opponentGender]?.name}
-          </span>
+      {/* ── RAKİP ALANI ─────────────────────────────────────────────────── */}
+      <div style={{ padding:'14px 16px 10px', display:'flex',flexDirection:'column',alignItems:'center',gap:'12px',flexShrink:0 }}>
+        <motion.div
+          animate={!isMyTurn ? { boxShadow:[`0 0 0 ${theme.accent}00`,`0 0 18px ${theme.accent}`,`0 0 0 ${theme.accent}00`] } : {}}
+          transition={{ duration:1.4,repeat:Infinity }}
+          style={{
+            display:'flex',alignItems:'center',gap:'10px',
+            background:!isMyTurn ? theme.handBg : 'rgba(0,0,0,0.3)',
+            borderRadius:'20px', padding:'8px 18px',
+            border:!isMyTurn ? `2px solid ${theme.accent}` : '2px solid rgba(255,255,255,0.1)',
+            transition:'all 0.35s',
+          }}
+        >
+          <span style={{ fontSize:'1.2rem' }}>{players[opponentGender]?.avatar}</span>
+          <span style={{ color:'white',fontWeight:'900',fontSize:'0.92rem' }}>{players[opponentGender]?.name}</span>
           {!isMyTurn && (
-            <motion.span
-              animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity }}
-              style={{ color: colorHex, fontSize: '0.8rem', fontWeight: '700' }}
-            >⚡ Oynuyor</motion.span>
+            <motion.span animate={{ opacity:[0.5,1,0.5] }} transition={{ duration:0.8,repeat:Infinity }}
+              style={{ color:theme.accent,fontSize:'0.72rem',fontWeight:'700' }}>⚡ Oynuyor</motion.span>
           )}
-        </div>
-
-        {/* Rakibin kapalı kartları */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <CardBack count={theirCount} />
-          <span style={{
-            color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: '700',
-          }}>{theirCount} kart</span>
-        </div>
+        </motion.div>
+        <OpponentHand count={theirCount} theme={theme} />
       </div>
 
-      {/* ── ORTA ALAN: Orta deste + Çekme destesi ──────────────────────────── */}
-      <div style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '28px', padding: '8px 16px',
-      }}>
+      {/* ── OYUN MASASI ─────────────────────────────────────────────────── */}
+      <div style={{ flex:1, display:'flex',alignItems:'center',justifyContent:'center',gap:'clamp(14px,5vw,30px)',padding:'0 16px',position:'relative' }}>
+
+        {/* "Kaydır yukarı" bölgesi göstergesi */}
+        <AnimatePresence>
+          {cardPortal && (
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              style={{
+                position:'absolute', inset:'10px',
+                border:`2.5px dashed ${portalCanPlay ? theme.accent : 'rgba(255,255,255,0.2)'}`,
+                borderRadius:'20px', pointerEvents:'none',
+                background:portalCanPlay ? `${theme.accentGlow}` : 'transparent',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all 0.2s',
+              }}
+            >
+              <span style={{ color:portalCanPlay?theme.accent:'rgba(255,255,255,0.25)', fontWeight:'900', fontSize:'1rem' }}>
+                {portalCanPlay ? '🎯 Bırak!' : '↑ Yukarı kaydır → Oyna'}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Çekme destesi */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:'7px' }}>
           <motion.div
-            whileHover={isMyTurn ? { y: -8, scale: 1.05 } : {}}
-            whileTap={isMyTurn ? { scale: 0.95 } : {}}
-            onClick={handleDrawCard}
-            animate={drawAnim ? { scale: [1, 1.2, 1] } : {}}
+            whileHover={isMyTurn ? { y:-8,scale:1.06 } : {}}
+            whileTap={isMyTurn ? { scale:0.94 } : {}}
+            onClick={handleDraw}
             style={{
-              width: 'clamp(60px,16vw,80px)', height: 'clamp(88px,24vw,116px)',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #2d1b4e, #1a0033)',
-              border: isMyTurn ? '3px solid rgba(255,255,255,0.8)' : '2px solid rgba(255,255,255,0.2)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', cursor: isMyTurn ? 'pointer' : 'default',
-              boxShadow: isMyTurn ? '0 8px 24px rgba(255,255,255,0.2)' : 'none',
-              backgroundImage: 'repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,0.03) 8px,rgba(255,255,255,0.03) 16px)',
+              width:'clamp(60px,16vw,78px)', height:'clamp(90px,24vw,117px)',
+              borderRadius:'12px', background:theme.cardBack,
+              border:isMyTurn?`3px solid ${theme.accent}`:`2px solid ${theme.cardBackBorder}`,
+              cursor:isMyTurn?'pointer':'default',
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:'2rem',
+              boxShadow:isMyTurn?`0 8px 25px ${theme.accentGlow}`:'none',
+              backgroundImage:'repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,0.025) 8px,rgba(255,255,255,0.025) 16px)',
+              transition:'all 0.3s',
             }}
-          >
-            <span style={{ fontSize: '1.5rem' }}>🔥</span>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontWeight: '900', marginTop: '4px' }}>
-              {drawPile.length}
-            </span>
-          </motion.div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>
-            ÇEKME
-          </span>
+          >🔥</motion.div>
+          <span style={{ color:'rgba(255,255,255,0.4)',fontSize:'0.62rem',fontWeight:'900',textTransform:'uppercase',letterSpacing:'1px' }}>ÇEK</span>
         </div>
 
-        {/* Atılan kart animasyonu + üstteki kart */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          <div style={{ position: 'relative', width: 'clamp(68px,18vw,90px)', height: 'clamp(100px,26vw,130px)' }}>
+        {/* Atılan kart / üst kart */}
+        <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:'8px' }}>
+          <div style={{ position:'relative' }}>
             <AnimatePresence>
               {animCard && (
-                <motion.div
-                  key="anim"
-                  initial={{ scale: 1.3, opacity: 1, y: -30 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  style={{ position: 'absolute', inset: 0, zIndex: 10 }}
+                <motion.div key="anim-card"
+                  initial={{ scale:1.5,y:-50,opacity:0.7 }} animate={{ scale:1,y:0,opacity:1 }}
+                  exit={{ opacity:0 }} transition={{ duration:0.4,type:'spring',bounce:0.3 }}
+                  style={{ position:'absolute',inset:0,zIndex:10 }}
                 >
-                  <UnoCard card={animCard} style={{ width: '100%', height: '100%' }} />
+                  <UnoCard card={animCard} shadow />
                 </motion.div>
               )}
             </AnimatePresence>
-            <UnoCard card={topCard} style={{ width: '100%', height: '100%' }} />
+            <UnoCard card={topCard} shadow />
           </div>
 
-          {/* Aktif renk göstergesi */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '20px', height: '20px', borderRadius: '50%',
-              background: colorHex, border: '2px solid white',
-              boxShadow: `0 0 10px ${colorHex}`,
-            }} />
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'capitalize' }}>
-              {currentColor}
-            </span>
+          {/* Aktif renk noktası */}
+          <div style={{ display:'flex',alignItems:'center',gap:'6px' }}>
+            <motion.div
+              animate={{ boxShadow:[`0 0 5px ${colorGlow}`,`0 0 15px ${colorGlow}`,`0 0 5px ${colorGlow}`] }}
+              transition={{ duration:1.5,repeat:Infinity }}
+              style={{ width:'16px',height:'16px',borderRadius:'50%', background:CARD_COLORS[currentColor]?.bg||'#ccc', border:'2px solid white' }}
+            />
+            <span style={{ color:'rgba(255,255,255,0.65)',fontSize:'0.7rem',fontWeight:'700',textTransform:'capitalize' }}>{currentColor}</span>
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: '700', textTransform: 'uppercase' }}>
-            ATILAN
-          </span>
+          <span style={{ color:'rgba(255,255,255,0.38)',fontSize:'0.6rem',fontWeight:'900',textTransform:'uppercase',letterSpacing:'1px' }}>ATILAN</span>
         </div>
 
         {/* Sıra göstergesi */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:'7px' }}>
           <motion.div
-            animate={isMyTurn ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ duration: 1, repeat: Infinity }}
+            animate={isMyTurn ? { scale:[1,1.1,1] } : {}}
+            transition={{ duration:0.9,repeat:Infinity }}
             style={{
-              width: 'clamp(56px,14vw,72px)', height: 'clamp(56px,14vw,72px)',
-              borderRadius: '50%',
-              background: isMyTurn
-                ? 'linear-gradient(135deg, #2dc653, #1a8c3a)'
-                : 'rgba(255,255,255,0.1)',
-              border: isMyTurn ? '3px solid white' : '2px solid rgba(255,255,255,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.5rem',
-              boxShadow: isMyTurn ? '0 0 20px rgba(45,198,83,0.6)' : 'none',
+              width:'clamp(52px,13vw,65px)', height:'clamp(52px,13vw,65px)',
+              borderRadius:'50%',
+              background:isMyTurn?`linear-gradient(135deg,${theme.accent},${theme.secondary})`:'rgba(255,255,255,0.07)',
+              border:isMyTurn?'3px solid white':'2px solid rgba(255,255,255,0.12)',
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.7rem',
+              boxShadow:isMyTurn?`0 0 22px ${theme.accentGlow}`:'none',
+              transition:'all 0.4s',
             }}
-          >
-            {isMyTurn ? '🎯' : '⏳'}
-          </motion.div>
-          <span style={{
-            color: isMyTurn ? '#2dc653' : 'rgba(255,255,255,0.4)',
-            fontSize: '0.7rem', fontWeight: '900', textTransform: 'uppercase',
-          }}>
-            {isMyTurn ? 'SEN' : 'RAKİP'}
+          >{isMyTurn ? '🎯' : '⏳'}</motion.div>
+          <span style={{ color:isMyTurn?theme.accent:'rgba(255,255,255,0.3)', fontSize:'0.6rem',fontWeight:'900',textTransform:'uppercase',textAlign:'center' }}>
+            {isMyTurn ? 'SEN OYNA' : 'RAKİP'}
           </span>
         </div>
       </div>
 
-      {/* ── BENİM ELİM (alt) ───────────────────────────────────────────────── */}
+      {/* ── BENİM ELİM ──────────────────────────────────────────────────── */}
       <div style={{
-        padding: '8px 8px calc(8px + env(safe-area-inset-bottom, 0px))',
-        background: 'rgba(0,0,0,0.4)',
-        borderRadius: '20px 20px 0 0',
-        backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderBottom: 'none',
+        padding:'10px 10px calc(10px + env(safe-area-inset-bottom,0px))',
+        background:theme.handBg,
+        borderRadius:'24px 24px 0 0',
+        backdropFilter:'blur(22px)',
+        border:`1px solid ${theme.handBorder}`, borderBottom:'none',
+        flexShrink:0,
       }}>
-        {/* Kendi isim + kart sayısı */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '4px 8px 8px', marginBottom: '4px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1rem' }}>{players[localPlayer]?.avatar}</span>
-            <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: '700', fontSize: '0.85rem' }}>
-              {players[localPlayer]?.name}
-            </span>
+        {/* Başlık */}
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 4px 6px' }}>
+          <div style={{ display:'flex',alignItems:'center',gap:'8px' }}>
+            <span style={{ fontSize:'1rem' }}>{players[localPlayer]?.avatar}</span>
+            <span style={{ color:'rgba(255,255,255,0.8)',fontWeight:'700',fontSize:'0.85rem' }}>{players[localPlayer]?.name}</span>
           </div>
-          <div style={{
-            background: isMyTurn ? 'linear-gradient(135deg, #9d4edd, #ff3c78)' : 'rgba(255,255,255,0.1)',
-            borderRadius: '12px', padding: '4px 12px',
-            color: 'white', fontWeight: '900', fontSize: '0.8rem',
-            transition: 'all 0.3s',
-          }}>
-            {myHand.length} kart
-            {!isMyTurn && <span style={{ opacity: 0.6 }}> · Sıra bekleniyor</span>}
-          </div>
+          <span style={{
+            background:isMyTurn?`linear-gradient(135deg,${theme.accent},${theme.secondary})`:'rgba(255,255,255,0.1)',
+            borderRadius:'10px',padding:'3px 10px',color:'white',fontWeight:'900',fontSize:'0.78rem',transition:'all 0.3s',
+          }}>{myHand.length} kart</span>
         </div>
+
+        {/* İpucu */}
+        {isMyTurn && (
+          <p style={{ color:'rgba(255,255,255,0.25)',fontSize:'0.62rem',textAlign:'center',marginBottom:'5px',fontWeight:'600' }}>
+            ↑ Kaydır = oyna &nbsp;|&nbsp; Basılı tut = detay gör
+          </p>
+        )}
 
         {/* Kartlar */}
         <div style={{
-          display: 'flex', gap: '6px',
-          overflowX: 'auto', padding: '4px 4px 4px',
-          scrollbarWidth: 'none',
-          WebkitOverflowScrolling: 'touch',
+          display:'flex', gap:'8px',
+          overflowX:'auto', overflowY:'visible',
+          padding:'6px 4px 8px',
+          scrollbarWidth:'none', WebkitOverflowScrolling:'touch',
+          minHeight:'clamp(130px,34vw,160px)',
         }}>
-          {myHand.map((card, idx) => (
-            <UnoCard
-              key={`${card.id}-${idx}`}
-              card={card}
-              isSmall={false}
-              isPlayable={playableIndices.includes(idx)}
-              onClick={() => playCard(card, idx)}
-            />
-          ))}
+          <AnimatePresence>
+            {myHand.map((card, idx) => (
+              <motion.div
+                key={`${card.id}-${idx}`}
+                initial={{ scale:0,y:50,opacity:0 }}
+                animate={{ scale:1,y:0,opacity:1 }}
+                exit={{ scale:0,y:-80,opacity:0 }}
+                transition={{ type:'spring',bounce:0.3,delay:idx*0.025 }}
+                style={{
+                  flexShrink:0,
+                  opacity: cardPortal?.idx === idx ? 0 : 1,
+                  transition:'opacity 0.05s',
+                  cursor:'grab',
+                }}
+                onPointerDown={e => startCardGesture(card, idx, e)}
+                onPointerMove={moveCardGesture}
+                onPointerUp={endCardGesture}
+                onPointerCancel={endCardGesture}
+              >
+                <UnoCard card={card} size="md" shadow={false} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
           {myHand.length === 0 && (
-            <div style={{ padding: '20px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', width: '100%' }}>
+            <div style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.3)',fontSize:'0.9rem',padding:'20px' }}>
               El boş!
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Renk Seçici ────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showColorPicker && <ColorPicker onSelect={handleColorSelected} />}
-      </AnimatePresence>
+      {/* ── PORTAL: sürüklenen kart ─────────────────────────────────────── */}
+      {cardPortal && createPortal(
+        <motion.div
+          style={{
+            position:'fixed',
+            left: cardPortal.startX,
+            top: cardPortal.startY,
+            width: cardPortal.w,
+            height: cardPortal.h,
+            zIndex:999,
+            x: portalX,
+            y: portalY,
+            pointerEvents:'none',
+          }}
+        >
+          <div style={{ filter:portalCanPlay?`drop-shadow(0 0 16px ${theme.accent})`:'none', transition:'filter 0.2s', transform:portalCanPlay?'scale(1.08)':'scale(1)', transition:'transform 0.2s' }}>
+            <UnoCard card={cardPortal.card} size="md" shadow />
+          </div>
+        </motion.div>,
+        document.body
+      )}
 
-      {/* ── Görev Modalı ───────────────────────────────────────────────────── */}
+      {/* ── MODALLER ────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showColorPicker && <ColorPicker onSelect={handleColorSelect} />}
+      </AnimatePresence>
       <AnimatePresence>
         {taskModal && (
           <TaskModal
@@ -872,6 +963,12 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             onClose={taskModal.isAttacker ? () => setTaskModal(null) : undefined}
           />
         )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {drawnCard && <DrawnCardPreview card={drawnCard} onDismiss={confirmDrawn} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {zoomedCard && <ZoomOverlay card={zoomedCard} onClose={() => setZoomedCard(null)} />}
       </AnimatePresence>
     </div>
   );
