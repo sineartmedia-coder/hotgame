@@ -62,13 +62,28 @@ export const MultiplayerProvider = ({ children }) => {
     });
   }, [handleIncomingData]);
 
+  // PeerJS sunucu ayarları - internet üzerinden (Ankara-İzmir gibi) çalışması için
+  const getPeerConfig = () => ({
+    debug: 0,
+    host: '0.peerjs.com',
+    port: 443,
+    path: '/',
+    secure: true,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+      ],
+    },
+  });
+
   // HOST: create room
   const createRoom = useCallback((code) => {
     destroyPeer();
     setConnectionError(null);
-    const peer = new window.Peer(code, {
-      debug: 0,
-    });
+    const peer = new window.Peer(code, getPeerConfig());
     peerRef.current = peer;
     setRoomCode(code);
     setRole('host');
@@ -95,9 +110,7 @@ export const MultiplayerProvider = ({ children }) => {
     setConnectionError(null);
     // Guest uses a different peer id to avoid collision
     const guestId = code + '_guest_' + Math.floor(Math.random() * 9000 + 1000);
-    const peer = new window.Peer(guestId, {
-      debug: 0,
-    });
+    const peer = new window.Peer(guestId, getPeerConfig());
     peerRef.current = peer;
     setRoomCode(code);
     setRole('guest');
