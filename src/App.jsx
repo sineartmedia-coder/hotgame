@@ -15,7 +15,8 @@ function App() {
       return JSON.parse(saved);
     }
     return {
-      deckSize: 24,
+      deckSize: 7,
+      taskCardCount: 3,
       categories: {
         erotik: true,
         igrenc: true,
@@ -74,8 +75,7 @@ function App() {
       <div className="app-container">
         {currentScreen === 'home' && <Home onStart={() => setCurrentScreen('settings')} />}
         {currentScreen === 'settings' && <Settings settings={settings} setSettings={updateSettings} onNext={() => setCurrentScreen('nameEntry')} />}
-        {currentScreen === 'nameEntry' && <NameEntry players={players} setPlayers={setPlayers} onNext={() => setCurrentScreen('dice')} />}
-        {currentScreen === 'dice' && <DiceRoll players={players} onFinish={(starter) => { setStartingPlayer(starter); setCurrentScreen('game'); }} />}
+        {currentScreen === 'nameEntry' && <NameEntry players={players} setPlayers={setPlayers} onNext={() => setCurrentScreen('game')} />}
         {currentScreen === 'game' && <Game players={players} setPlayers={setPlayers} startingPlayer={startingPlayer} onFinish={() => setCurrentScreen('gameOver')} settings={settings} />}
         {currentScreen === 'gameOver' && <GameOver players={players} onRestart={handleRestart} />}
       </div>

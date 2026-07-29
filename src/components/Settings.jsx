@@ -172,42 +172,95 @@ const Settings = ({ settings, setSettings, onNext }) => {
           {/* GENEL AYARLAR */}
           {activeTab === 'genel' && (
             <motion.div key="genel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: 'var(--color-purple)', fontWeight: 'bold', marginBottom: '10px' }}>
-                  <ListTodo size={18} style={{ verticalAlign: 'middle', marginRight: '5px' }}/> Deste Boyutu
+
+              {/* UNO Kart Sayısı */}
+              <div style={{ marginBottom: '28px' }}>
+                <label style={{ display: 'block', color: 'var(--color-purple)', fontWeight: 'bold', marginBottom: '8px', fontSize: '1rem' }}>
+                  🃏 Kişi Başına UNO Kart Sayısı
                 </label>
-                <input 
-                  type="number" 
+                <p style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '12px' }}>
+                  Oyun başlarken her oyuncuya kaç standart UNO kartı dağıtılsın?
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[5, 7, 10, 12, 15, 20].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleInputChange('deckSize', num)}
+                      style={{
+                        flex: 1, minWidth: '55px', padding: '14px 8px', borderRadius: '12px', border: 'none',
+                        background: settings.deckSize === num
+                          ? 'linear-gradient(135deg, #9d4edd, #ff3c78)'
+                          : 'rgba(255,255,255,0.07)',
+                        color: 'white', fontWeight: '900', fontSize: '1.1rem',
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: settings.deckSize === num ? '0 4px 15px rgba(157,78,221,0.5)' : 'none',
+                        border: settings.deckSize === num ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent',
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
                   value={settings.deckSize === 0 ? '' : settings.deckSize}
                   onChange={(e) => handleInputChange('deckSize', e.target.value)}
-                  placeholder="Kaç kart olsun?"
+                  placeholder="Özel sayı..."
+                  min="3" max="25"
                   style={{
-                    width: '100%', padding: '15px', borderRadius: '12px',
-                    background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(157,78,221,0.5)',
-                    color: 'white', fontSize: '1.2rem', outline: 'none'
+                    width: '100%', padding: '12px', borderRadius: '12px', marginTop: '10px',
+                    background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(157,78,221,0.4)',
+                    color: 'white', fontSize: '1rem', outline: 'none', textAlign: 'center'
                   }}
                 />
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: 'var(--color-orange)', fontWeight: 'bold', marginBottom: '10px' }}>
-                  <Flame size={18} style={{ verticalAlign: 'middle', marginRight: '5px' }}/> Oyun Süresi (Dakika)
+              {/* Görev Kartı Sayısı */}
+              <div style={{ marginBottom: '28px' }}>
+                <label style={{ display: 'block', color: 'var(--color-orange)', fontWeight: 'bold', marginBottom: '8px', fontSize: '1rem' }}>
+                  🔥 Kişi Başına Görev Kartı Sayısı
                 </label>
-                <p style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '10px' }}>
-                  Girilen süreyi kim en az kullanırsa "Zaman Bonusu" ekstra puan alır.
+                <p style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '12px' }}>
+                  UNO'daki +2/+4 kartları yerine görev kartları. Elindeki görev kartları <strong style={{color:'#ff9'}}>rakibine</strong> aittir!
                 </p>
-                <input 
-                  type="number" 
-                  value={settings.duration === 0 ? '' : settings.duration}
-                  onChange={(e) => handleInputChange('duration', e.target.value)}
-                  placeholder="Dakika cinsinden süre girin"
-                  style={{
-                    width: '100%', padding: '15px', borderRadius: '12px',
-                    background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,121,0,0.5)',
-                    color: 'white', fontSize: '1.2rem', outline: 'none'
-                  }}
-                />
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[0, 2, 3, 5, 7, 10].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleInputChange('taskCardCount', num)}
+                      style={{
+                        flex: 1, minWidth: '55px', padding: '14px 8px', borderRadius: '12px', border: 'none',
+                        background: settings.taskCardCount === num
+                          ? 'linear-gradient(135deg, #ff7900, #f5af19)'
+                          : 'rgba(255,255,255,0.07)',
+                        color: 'white', fontWeight: '900', fontSize: '1.1rem',
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: settings.taskCardCount === num ? '0 4px 15px rgba(255,121,0,0.5)' : 'none',
+                        border: settings.taskCardCount === num ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent',
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Özet */}
+              <div style={{
+                background: 'rgba(0,0,0,0.4)', borderRadius: '16px', padding: '16px',
+                border: '1px solid rgba(255,255,255,0.1)', marginBottom: '10px'
+              }}>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', textAlign: 'center', margin: 0 }}>
+                  Her oyuncu toplam{' '}
+                  <strong style={{ color: '#9d4edd', fontSize: '1.1rem' }}>{settings.deckSize || 7}</strong>
+                  {' '}UNO +{' '}
+                  <strong style={{ color: '#ff7900', fontSize: '1.1rem' }}>{settings.taskCardCount ?? 3}</strong>
+                  {' '}görev ={' '}
+                  <strong style={{ color: 'white', fontSize: '1.1rem' }}>{(settings.deckSize || 7) + (settings.taskCardCount ?? 3)}</strong>
+                  {' '}kart ile başlar
+                </p>
+              </div>
+
             </motion.div>
           )}
 
