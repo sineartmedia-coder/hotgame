@@ -644,7 +644,6 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       }
     }, 480);
 
-    e.currentTarget.setPointerCapture?.(e.pointerId);
     setCardPortal({ card, idx, startX: rect.left, startY: rect.top, w: rect.width, h: rect.height });
   }, [pendingDrawCount, portalY, portalX, showNotif]);
 
@@ -724,7 +723,12 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const colorGlow = CARD_COLORS[currentColor]?.glow || '#fff';
 
   return (
-    <div style={{ width:'100%',height:'100%', background:theme.bg, display:'flex',flexDirection:'column',position:'relative', overflow:'hidden' }}>
+    <div 
+      onPointerMove={moveCardGesture}
+      onPointerUp={endCardGesture}
+      onPointerCancel={endCardGesture}
+      style={{ width:'100%',height:'100%', background:theme.bg, display:'flex',flexDirection:'column',position:'relative', overflow:'hidden' }}
+    >
 
       {/* Ortam ışığı */}
       <div style={{
@@ -929,11 +933,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
                   opacity: cardPortal?.idx === idx ? 0 : 1,
                   transition:'opacity 0.1s',
                   cursor:'grab',
+                  touchAction: 'pan-x',
                 }}
                 onPointerDown={e => startCardGesture(card, idx, e)}
-                onPointerMove={moveCardGesture}
-                onPointerUp={endCardGesture}
-                onPointerCancel={endCardGesture}
               >
                 <UnoCard card={card} size="md" shadow={false} />
               </motion.div>
