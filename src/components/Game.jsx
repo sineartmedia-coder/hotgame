@@ -426,33 +426,53 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
         )}
 
         {isAttacker && !isOrtak && onResult && (
-          <div style={{ display:'flex',flexDirection:'column',gap:'12px' }}>
+          <div style={{ display:'flex',flexDirection:'column',gap:'10px' }}>
             {isQuestion ? (
               <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
-                style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                style={{ padding:'14px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
                 ✅ CEVAPLADI
               </motion.button>
             ) : (
-              <>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  ✅ YAPTI (+{card.penaltyDo} kart cezası gönder)
+                  style={{ flex: 1, padding:'14px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  ✅ YAPTI
                 </motion.button>
                 <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('fail')}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #e65100, #f57c00)',color:'white',border:'1px solid rgba(255,183,3,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  😅 YAPAMADI (+{card.penaltyFail} kart cezası gönder)
+                  style={{ flex: 1, padding:'14px',background:'linear-gradient(135deg, #e65100, #f57c00)',color:'white',border:'1px solid rgba(255,183,3,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  😅 YAPAMADI
                 </motion.button>
-                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('refuse')}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  🚫 REDDETTİ (+{card.penaltyRefuse} kart cezası gönder)
-                </motion.button>
-              </>
+              </div>
             )}
           </div>
         )}
 
+        {isAttacker && isOrtak && onResult && (
+          <div style={{ display:'flex',flexDirection:'column',gap:'10px' }}>
+             <div style={{ display: 'flex', gap: '10px' }}>
+               <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'me' })}
+                 style={{ flex: 1, padding:'14px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'0.9rem' }}>
+                 👑 BEN KAZANDIM
+               </motion.button>
+               <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'them' })}
+                 style={{ flex: 1, padding:'14px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'0.9rem' }}>
+                 👑 RAKİP KAZANDI
+               </motion.button>
+             </div>
+             <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'draw' })}
+               style={{ padding:'12px',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'16px',fontWeight:'600',cursor:'pointer',fontSize:'0.9rem' }}>
+               🤝 BERABERE
+             </motion.button>
+          </div>
+        )}
+
+        {!isAttacker && isOrtak && (
+          <div style={{ textAlign: 'center', padding: '10px', color: 'rgba(255,255,255,0.7)', fontSize: '1rem', fontStyle: 'italic' }}>
+            Kurucu kararı bekleniyor...
+          </div>
+        )}
         {!isAttacker && !isOrtak && (
-          <div style={{ textAlign: 'center', padding: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'center', padding: '10px', color: 'rgba(255,255,255,0.7)', fontSize: '1rem', fontStyle: 'italic' }}>
             Rakibin kararı bekleniyor...
           </div>
         )}
@@ -621,6 +641,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
           showNotif(`${players[opponentGender]?.name} sıranı ${data.card.type === CARD_TYPES.SKIP ? 'atladı' : 'döndürdü'}! ⊘`, '#ff3366');
           return;
         }
+        if (data.card.type === CARD_TYPES.WILD) {
+          showNotif(`${players[opponentGender]?.name} rengi ${data.newColor.toUpperCase()} olarak değiştirdi!`, COLOR_HEX[data.newColor] || '#fff', 4000);
+        }
+
         setIsMyTurn(true);
         break;
 
