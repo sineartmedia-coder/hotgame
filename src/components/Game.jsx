@@ -369,7 +369,7 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
               {diceResult ? (
                 <div style={{ fontSize: '4rem', textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>🎲 {diceResult}</div>
               ) : (
-                !isAttacker && !isOrtak ? (
+                (!isAttacker || isOrtak) ? (
                   <motion.button whileTap={{ scale:0.95 }} onClick={onRollDice}
                     style={{ padding:'16px 32px',background:'linear-gradient(135deg, #9d4edd, #5a189a)',color:'white',border:'none',borderRadius:'16px',fontWeight:'800',fontSize:'1.2rem',cursor:'pointer', boxShadow: '0 8px 20px rgba(157,78,221,0.4)' }}>
                     🎲 ZAR AT
@@ -393,7 +393,7 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
               <p style={{ color: timeLeft > 0 ? '#aaa' : '#ff3366', fontWeight: 'bold' }}>
                 {timeLeft > 0 ? (timerStarted ? 'Saniye Kaldı!' : 'Süre Bekleniyor...') : 'SÜRE BİTTİ!'}
               </p>
-              {isAttacker && !timerStarted && !isOrtak && (
+              {isAttacker && !timerStarted && (
                 <motion.button whileTap={{ scale:0.95 }} onClick={onStartTimer}
                   style={{ marginTop:'12px', padding:'12px 24px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'none',borderRadius:'12px',fontWeight:'700',fontSize:'1.1rem',cursor:'pointer' }}>
                   ⏱ SÜREYİ BAŞLAT
