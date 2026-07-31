@@ -1315,10 +1315,15 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
           <TaskModal
             card={taskModal.card}
             isAttacker={taskModal.isAttacker}
+            isOrtak={taskModal.isOrtak}
             opponentName={players[opponentGender]?.name}
             opponentAvatar={players[opponentGender]?.avatar}
-            onResult={!taskModal.isAttacker ? handleTaskResult : undefined}
-            onClose={taskModal.isAttacker ? () => setTaskModal(null) : undefined}
+            onResult={handleTaskResult}
+            onClose={() => setTaskModal(null)}
+            timerStarted={taskTimerStarted}
+            diceResult={taskDiceResult}
+            onStartTimer={handleStartTimer}
+            onRollDice={handleRollDice}
           />
         )}
       </AnimatePresence>
