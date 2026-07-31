@@ -44,10 +44,10 @@ const THEMES = {
 
 // ─── YENİ PREMIUM KART RENKLERİ (Neon / Glassmorphic) ──────────────────────
 const CARD_COLORS = {
-  kırmızı: { glow: '#ff003c', text: '#ff3366', bgOrb: 'radial-gradient(circle at center, rgba(255,0,60,0.25) 0%, transparent 65%)' },
-  mavi:    { glow: '#00e5ff', text: '#33eeff', bgOrb: 'radial-gradient(circle at center, rgba(0,229,255,0.25) 0%, transparent 65%)' },
-  yeşil:   { glow: '#39ff14', text: '#6bff4a', bgOrb: 'radial-gradient(circle at center, rgba(57,255,20,0.2) 0%, transparent 65%)' },
-  sarı:    { glow: '#ffcc00', text: '#ffdb33', bgOrb: 'radial-gradient(circle at center, rgba(255,204,0,0.25) 0%, transparent 65%)' },
+  kırmızı: { glow: '#ff3366', text: '#fff', bgOrb: 'linear-gradient(135deg, #d32f2f, #e53935)' },
+  mavi:    { glow: '#33eeff', text: '#fff', bgOrb: 'linear-gradient(135deg, #1976d2, #1e88e5)' },
+  yeşil:   { glow: '#6bff4a', text: '#fff', bgOrb: 'linear-gradient(135deg, #388e3c, #43a047)' },
+  sarı:    { glow: '#ffdb33', text: '#fff', bgOrb: 'linear-gradient(135deg, #fbc02d, #fdd835)' },
 };
 
 // ─── Random card pool ─────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ const UnoCard = ({ card, size = 'md', shadow = false }) => {
   return (
     <div style={{
       width: d.w, height: d.h, borderRadius: '14px',
-      background: 'rgba(15, 15, 22, 0.85)', // Koyu cam
+      background: (!isTask && !isWild) ? ct.bgOrb : 'rgba(15, 15, 22, 0.85)', // Use solid gradients for number/skip/reverse cards
       backdropFilter: 'blur(10px)',
       border: `1px solid ${cardBorder}`,
       position: 'relative', overflow: 'hidden',
@@ -778,11 +778,20 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       }
     } else {
       // Normal çekim (sıra bizdeyken kartımız yoktu çektik)
-      // Çektiği için sıra geçer (basit kural)
-      setIsMyTurn(false);
-      sendData({ type: 'turnPass' });
+      // Çektiği için sıra geçmiyor (Kullanıcı revizesi: Kart çektikten sonra sıra kimdeyse o oynamaya devam etmeli)
+      showNotif('Kart çektin. Oynamaya devam edebilirsin veya pas geçebilirsin.', '#6bff4a');
     }
   }, [drawnCard, pendingDrawCount, sendData, showNotif]);
+
+  // ── Pas Geç (Sırayı Sal) ──────────────────────────────────────────────────
+  const passTurn = useCallback(() => {
+    if (!isMyTurn) return;
+    if (pendingDrawCount > 0) { showNotif(`Önce ${pendingDrawCount} ceza kartını çekmelisin!`, '#ff3366'); return; }
+    
+    setIsMyTurn(false);
+    sendData({ type: 'turnPass' });
+    showNotif('Sırayı pas geçtin.', '#aaa');
+  }, [isMyTurn, pendingDrawCount, sendData, showNotif]);
 
   // ── Görev sonucu ──────────────────────────────────────────────────────────
   const handleTaskResult = useCallback((result, extraData = null) => {
@@ -1141,24 +1150,44 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
           </div>
         </div>
 
-        {/* Sıra göstergesi */}
+        {/* Sıra göstergesi ve Pas Geç */}
         <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:'10px' }}>
           <motion.div
-            animate={isMyTurn && pendingDrawCount === 0 ? { scale:[1,1.05,1], rotate: [0, 5, 0, -5, 0] } : {}}
-            transition={{ duration:2,repeat:Infinity }}
+            animate={isMyTurn && pendingDrawCount === 0 ? { scale:[1,1.1,1], rotate: [0, 5, 0, -5, 0], boxShadow: [`0 0 15px ${theme.accentGlow}`, `0 0 35px ${theme.accentGlow}`, `0 0 15px ${theme.accentGlow}`] } : {}}
+            transition={{ duration:1.5,repeat:Infinity }}
             style={{
-              width:'clamp(45px,12vw,60px)', height:'clamp(45px,12vw,60px)',
+              width:'clamp(50px,14vw,70px)', height:'clamp(50px,14vw,70px)',
               borderRadius:'50%',
-              background:isMyTurn && pendingDrawCount === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)',
-              border:`1px solid ${isMyTurn && pendingDrawCount === 0 ? theme.accent : 'rgba(255,255,255,0.1)'}`,
-              display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.6rem',
-              boxShadow:isMyTurn && pendingDrawCount === 0 ?`0 0 25px ${theme.accentGlow}, inset 0 0 10px ${theme.accentGlow}`:'none',
+              background:isMyTurn && pendingDrawCount === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.3)',
+              border:`2px solid ${isMyTurn && pendingDrawCount === 0 ? theme.accent : 'rgba(255,255,255,0.1)'}`,
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:'2rem',
               backdropFilter: 'blur(5px)', transition:'all 0.4s',
             }}
           >{isMyTurn && pendingDrawCount === 0 ? '🎯' : '⏳'}</motion.div>
-          <span style={{ color:isMyTurn && pendingDrawCount === 0 ?theme.accent:'rgba(255,255,255,0.2)', fontSize:'0.55rem',fontWeight:'600',textTransform:'uppercase',textAlign:'center', letterSpacing:'1px' }}>
-            {isMyTurn && pendingDrawCount === 0 ? 'SENİN SIRAN' : 'BEKLE'}
+          
+          <span style={{ 
+            color:isMyTurn && pendingDrawCount === 0 ? theme.accent : 'rgba(255,255,255,0.2)', 
+            fontSize: isMyTurn ? '0.75rem' : '0.55rem',
+            fontWeight:'800', textTransform:'uppercase', textAlign:'center', letterSpacing:'1px',
+            textShadow: isMyTurn ? `0 0 10px ${theme.accent}` : 'none'
+          }}>
+            {isMyTurn && pendingDrawCount === 0 ? 'SIRA SENDE' : 'SIRA RAKİPTE'}
           </span>
+
+          {isMyTurn && pendingDrawCount === 0 && (
+            <motion.button
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={passTurn}
+              style={{
+                marginTop: '10px', padding: '8px 16px', background: 'rgba(255,51,102,0.2)',
+                color: '#ff3366', border: '1px solid #ff3366', borderRadius: '12px',
+                fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer',
+                boxShadow: '0 4px 10px rgba(255,51,102,0.3)', letterSpacing: '1px'
+              }}
+            >
+              PAS GEÇ
+            </motion.button>
+          )}
         </div>
       </div>
 
