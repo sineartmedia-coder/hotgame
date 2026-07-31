@@ -28,7 +28,7 @@ export const CARD_TYPES = {
 };
 
 // Standart UNO destesi oluştur
-export function buildUnoDeck(mockQuestions = []) {
+export function buildUnoDeck(mockQuestions = [], usedTaskIds = []) {
   const deck = [];
   let id = 1;
 
@@ -46,8 +46,11 @@ export function buildUnoDeck(mockQuestions = []) {
     for (let i = 0; i < 2; i++) {
       let qData = null;
       if (mockQuestions.length > 0) {
-        const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
-        qData = { ...randomQ, penaltyDo: 0, penaltyFail: 0, penaltyRefuse: 0 };
+        const availableQs = mockQuestions.filter(q => !usedTaskIds.includes(q.id));
+        if (availableQs.length > 0) {
+          const randomQ = availableQs[Math.floor(Math.random() * availableQs.length)];
+          qData = { ...randomQ, penaltyDo: 0, penaltyFail: 0, penaltyRefuse: 0 };
+        }
       }
       deck.push({ id: id++, type: CARD_TYPES.SKIP, color, value: 20, display: '⊘', questionData: qData });
     }
@@ -56,8 +59,11 @@ export function buildUnoDeck(mockQuestions = []) {
     for (let i = 0; i < 2; i++) {
       let qData = null;
       if (mockQuestions.length > 0) {
-        const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
-        qData = { ...randomQ, penaltyDo: 0, penaltyFail: 0, penaltyRefuse: 0 };
+        const availableQs = mockQuestions.filter(q => !usedTaskIds.includes(q.id));
+        if (availableQs.length > 0) {
+          const randomQ = availableQs[Math.floor(Math.random() * availableQs.length)];
+          qData = { ...randomQ, penaltyDo: 0, penaltyFail: 0, penaltyRefuse: 0 };
+        }
       }
       deck.push({ id: id++, type: CARD_TYPES.REVERSE, color, value: 20, display: '⇄', questionData: qData });
     }
@@ -77,14 +83,14 @@ export function buildUnoDeck(mockQuestions = []) {
 // penaltyDo: görevi yaparsa çekilecek kart sayısı
 // penaltyRefuse: reddederse çekilecek kart sayısı
 // penaltyFail: yapamamazsa çekilecek kart sayısı
-export function buildTaskCards(mockCards, taskCount, holderGender) {
+export function buildTaskCards(mockCards, taskCount, holderGender, usedTaskIds = []) {
   // holderGender: kartı elinde tutacak kişi (rakibinin görevlerini tutar)
   // targetGender: görevi yapacak kişi (rakip)
   const targetGender = holderGender === 'woman' ? 'man' : 'woman';
 
-  // Ortak kartları da dahil et
+  // Ortak kartları da dahil et ve kullanılmışları filtrele
   const pool = mockCards.filter(c =>
-    c.target === targetGender || c.target === 'ortak'
+    (c.target === targetGender || c.target === 'ortak') && !usedTaskIds.includes(c.id)
   );
 
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
@@ -128,16 +134,16 @@ export function shuffle(arr) {
 // deckSize: UNO kartı sayısı
 // taskCount: görev kartı sayısı
 // localGender: yerel oyuncunun cinsiyeti
-export function dealGame(deckSize, taskCount, localGender, mockCards, mockQuestions = []) {
+export function dealGame(deckSize, taskCount, localGender, mockCards, mockQuestions = [], usedTaskIds = []) {
   // Tüm UNO destesini oluştur
-  const fullUno = shuffle(buildUnoDeck(mockQuestions));
+  const fullUno = shuffle(buildUnoDeck(mockQuestions, usedTaskIds));
 
   // Her oyuncuya deckSize kadar UNO kartı
   const myUnoCards    = fullUno.slice(0, deckSize);
   const theirUnoCards = fullUno.slice(deckSize, deckSize * 2);
   // Orta desteye karıştırılacak görev kartları (çekilebilir görevler)
   // 10 adet görev kartı desteye serpiştirilir. Bunlar oynandığında her zaman rakibe etki eder.
-  const poolTasks = mockCards.filter(c => c.target !== 'ortak');
+  const poolTasks = mockCards.filter(c => c.target !== 'ortak' && !usedTaskIds.includes(c.id));
   const shuffledTasks = shuffle([...poolTasks]);
   const deckTasks = shuffledTasks.slice(0, 10).map((card, i) => {
     let finalPenalty = card.penaltyAmount === 'random' ? (Math.floor(Math.random() * 8) + 1) : parseInt(card.penaltyAmount, 10);
@@ -159,8 +165,8 @@ export function dealGame(deckSize, taskCount, localGender, mockCards, mockQuesti
 
   // Görev kartları: BENİM elimdekiler RAKİBİM içindir
   // localGender='woman' → bende man görevleri var, rakipte woman görevleri var
-  const myTaskCards   = buildTaskCards(mockCards, taskCount, localGender);
-  const theirTaskCards= buildTaskCards(mockCards, taskCount, localGender === 'woman' ? 'man' : 'woman');
+  const myTaskCards   = buildTaskCards(mockCards, taskCount, localGender, usedTaskIds);
+  const theirTaskCards= buildTaskCards(mockCards, taskCount, localGender === 'woman' ? 'man' : 'woman', usedTaskIds);
 
   // Orta deste: ilk açılan kart (sayı kartı olmalı)
   let topCard = null;

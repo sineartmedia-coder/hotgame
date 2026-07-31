@@ -52,8 +52,8 @@ const CARD_COLORS = {
 
 // ─── Random card pool ─────────────────────────────────────────────────────────
 const _pool = [];
-const getRandomCard = () => {
-  if (_pool.length < 6) shuffle(buildUnoDeck()).forEach(c => _pool.push(c));
+const getRandomCard = (usedTaskIds = []) => {
+  if (_pool.length < 6) shuffle(buildUnoDeck([], usedTaskIds)).forEach(c => _pool.push(c));
   return { ..._pool.shift(), id: Date.now() + Math.random() * 100000 };
 };
 
@@ -478,7 +478,7 @@ const DrawnCardPreview = ({ card, onDismiss, pendingCount }) => (
 );
 
 // ─── Ana bileşen ──────────────────────────────────────────────────────────────
-const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
+const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTaskIds, setUsedTaskIds }) => {
   const { localPlayer, sendData, onData, role, remoteStream, isMuted, toggleMute } = useMultiplayer();
   const theme = THEMES[localPlayer] || THEMES.woman;
   const opponentGender = localPlayer === 'woman' ? 'man' : 'woman';
@@ -536,7 +536,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     if (role === 'host') {
       const deckSize  = settings.deckSize || 7;
       const taskCount = settings.taskCardCount ?? 3;
-      const dealt = dealGame(deckSize, taskCount, localPlayer, MOCK_CARDS, MOCK_QUESTIONS);
+      const dealt = dealGame(deckSize, taskCount, localPlayer, MOCK_CARDS, MOCK_QUESTIONS, usedTaskIds);
 
       setMyHand(dealt.myHand);
       setTheirCount(dealt.theirHand.length);
@@ -564,7 +564,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         pistiCard: newPisti
       });
     }
-  }, [localPlayer, role, gameStarted, settings, sendData]);
+  }, [localPlayer, role, gameStarted, settings, sendData, usedTaskIds]);
 
   // ── Data handler ───────────────────────────────────────────────────────────
   const handleData = useCallback((data) => {
@@ -597,6 +597,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         }
         if (data.card.type === CARD_TYPES.SKIP) {
           if (data.card.questionData) {
+            if (data.card.questionData.id) setUsedTaskIds(prev => [...prev, data.card.questionData.id]);
             setPendingTaskCard(data.card);
             setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
             return;
@@ -633,6 +634,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       case 'commonTaskTrigger':
         // Ortak görev tetiklendi! İki oyuncuya da aynı anda çıkar.
         const commonCard = data.card;
+        if (commonCard.taskData?.id) setUsedTaskIds(prev => [...prev, commonCard.taskData.id]);
         setPendingTaskCard(commonCard);
         setTaskModal({ card: commonCard, isAttacker: role === 'host', isOrtak: true }); // Sadece Host kararı verir!
         break;
@@ -668,7 +670,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       const elapsed = Date.now() - commonTaskTimer;
       if (elapsed > 300000) { // 5 dakika (300 saniye)
         setCommonTaskTimer(Date.now()); // Süreyi sıfırla
-        const poolOrtak = require('../data/cards').MOCK_COMMON_TASKS || [];
+        const poolOrtak = (require('../data/cards').MOCK_COMMON_TASKS || []).filter(c => !usedTaskIds.includes(c.id));
         if (poolOrtak.length > 0) {
           const cardData = poolOrtak[Math.floor(Math.random() * poolOrtak.length)];
           const card = {
@@ -677,6 +679,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
             taskData: cardData,
             display: 'Ortak Görev'
           };
+          if (cardData.id) setUsedTaskIds(prev => [...prev, cardData.id]);
           sendData({ type: 'commonTaskTrigger', card });
           setPendingTaskCard(card);
           setTaskModal({ card, isAttacker: true, isOrtak: true }); // Host yönetir
@@ -684,7 +687,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       }
     }, 10000); // Her 10 saniyede bir kontrol et
     return () => clearInterval(interval);
-  }, [gameStarted, role, commonTaskTimer, sendData]);
+  }, [gameStarted, role, commonTaskTimer, sendData, usedTaskIds]);
 
   // ── Kart oyna ─────────────────────────────────────────────────────────────
   const playCard = useCallback((card, idx) => {
@@ -721,6 +724,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     
     if (card.type === CARD_TYPES.TASK) {
       // Biz görev kartı attık. Biz attacker'ız.
+      if (card.taskData?.id) setUsedTaskIds(prev => [...prev, card.taskData.id]);
       setPendingTaskCard(card);
       setTaskModal({ card, isAttacker: true, isOrtak: false });
       // Sıramız BİTMİYOR! Görev atıldıktan sonra normal kart atmaya devam edebilmeliyiz.
@@ -729,6 +733,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     
     if (card.type === CARD_TYPES.SKIP) {
       if (card.questionData) {
+        if (card.questionData.id) setUsedTaskIds(prev => [...prev, card.questionData.id]);
         // Rakip cevaplayacak ve pas geçecek
         setIsMyTurn(false);
         showNotif('Soru rakibe iletildi, devam etmesi bekleniyor... ⏳', '#ff7900', 0);
@@ -751,9 +756,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const handleDraw = useCallback(() => {
     if (!isMyTurn && pendingDrawCount === 0) { showNotif('Sıra sende değil!', '#666'); return; }
     // Ceza çekimi veya normal çekim
-    const card = getRandomCard();
+    const card = getRandomCard(usedTaskIds);
     setDrawnCard(card);
-  }, [isMyTurn, pendingDrawCount, showNotif]);
+  }, [isMyTurn, pendingDrawCount, showNotif, usedTaskIds]);
 
   // Çekilen kartı ele alma ve devame etme
   const confirmDrawn = useCallback(() => {

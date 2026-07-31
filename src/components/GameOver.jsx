@@ -4,11 +4,14 @@ import { MOCK_PENALTIES } from '../data/cards';
 import { useMultiplayer } from '../context/MultiplayerContext';
 
 // 9 ceza kartını 3x3 grid'de gösterir, tıklanınca açılır
-const PenaltyGrid = ({ onClose }) => {
+const PenaltyGrid = ({ onClose, onPenaltyPicked }) => {
   const [flipped, setFlipped] = useState({});
   const penalties = MOCK_PENALTIES.slice(0, 9);
 
-  const flip = (id) => setFlipped(prev => ({ ...prev, [id]: true }));
+  const flip = (id) => {
+    setFlipped(prev => ({ ...prev, [id]: true }));
+    if (onPenaltyPicked) onPenaltyPicked(true);
+  };
 
   return (
     <motion.div
@@ -97,8 +100,9 @@ const PenaltyGrid = ({ onClose }) => {
 };
 
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
-const GameOver = ({ players, onRestart }) => {
+const GameOver = ({ players, setPlayers, onRestart, currentRound, roundCount, onNextRound }) => {
   const [showPenalties, setShowPenalties] = useState(false);
+  const [penaltyPicked, setPenaltyPicked] = useState(false);
   const { reset } = useMultiplayer();
 
   const handleRestart = () => {
@@ -122,7 +126,7 @@ const GameOver = ({ players, onRestart }) => {
   return (
     <>
       <AnimatePresence>
-        {showPenalties && <PenaltyGrid onClose={() => setShowPenalties(false)} />}
+        {showPenalties && <PenaltyGrid onClose={() => setShowPenalties(false)} onPenaltyPicked={setPenaltyPicked} />}
       </AnimatePresence>
 
       <div style={{
@@ -149,10 +153,16 @@ const GameOver = ({ players, onRestart }) => {
         }}>
 
         <motion.h1 initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          style={{ fontSize: '3rem', color: 'white', fontWeight: '900', marginBottom: '16px', textAlign: 'center',
+          style={{ fontSize: '3rem', color: 'white', fontWeight: '900', marginBottom: '8px', textAlign: 'center',
             textShadow: `0 0 30px ${winCol}` }}>
-          GECE BİTTİ! 🌙
+          {currentRound < roundCount ? `${currentRound}. TUR BİTTİ! 🌙` : 'GECE BİTTİ! 🌙'}
         </motion.h1>
+        
+        {currentRound < roundCount && (
+          <p style={{ color: '#aaa', fontSize: '1.2rem', marginBottom: '16px', fontWeight: 'bold' }}>
+            {currentRound} / {roundCount}. Tur Tamamlandı
+          </p>
+        )}
 
         {/* Kazanan */}
         {winner !== 'tie' ? (
@@ -229,16 +239,32 @@ const GameOver = ({ players, onRestart }) => {
             </motion.button>
           )}
 
-          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            onClick={handleRestart}
-            style={{
-              padding: '16px', background: 'rgba(255,255,255,0.1)',
-              color: 'white', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.2)',
-              fontWeight: '700', fontSize: '1.1rem', cursor: 'pointer',
-              display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
-            }}>
-            <span>🔄</span> Tekrar Oyna
-          </motion.button>
+          {currentRound < roundCount ? (
+            <motion.button whileHover={(!loser || penaltyPicked) ? { scale: 1.05 } : {}} whileTap={(!loser || penaltyPicked) ? { scale: 0.95 } : {}}
+              onClick={onNextRound}
+              disabled={loser && !penaltyPicked}
+              style={{
+                padding: '16px', background: (!loser || penaltyPicked) ? 'linear-gradient(135deg, #2dc653, #1a5c2a)' : 'rgba(255,255,255,0.1)',
+                color: (!loser || penaltyPicked) ? 'white' : '#666', borderRadius: '30px', border: 'none',
+                fontWeight: '700', fontSize: '1.1rem', cursor: (!loser || penaltyPicked) ? 'pointer' : 'not-allowed',
+                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
+                boxShadow: (!loser || penaltyPicked) ? '0 10px 25px rgba(45,198,83,0.4)' : 'none'
+              }}>
+              <span>⏩</span> Sıradaki Tura Geç
+            </motion.button>
+          ) : (
+            <motion.button whileHover={(!loser || penaltyPicked) ? { scale: 1.05 } : {}} whileTap={(!loser || penaltyPicked) ? { scale: 0.95 } : {}}
+              onClick={handleRestart}
+              disabled={loser && !penaltyPicked}
+              style={{
+                padding: '16px', background: (!loser || penaltyPicked) ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                color: (!loser || penaltyPicked) ? 'white' : '#666', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.2)',
+                fontWeight: '700', fontSize: '1.1rem', cursor: (!loser || penaltyPicked) ? 'pointer' : 'not-allowed',
+                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+              }}>
+              <span>🔄</span> Yeniden Oyna
+            </motion.button>
+          )}
         </motion.div>
         </div> {/* /screen-scroll */}
       </div>

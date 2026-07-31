@@ -13,45 +13,22 @@ const TABS = [
   { id: 'oyunlar', label: 'Oyunlar', icon: Gamepad2 },
 ];
 
-const CATEGORIES = {
-  erotik: 'Erotik Görevler',
-  igrenc: 'İğrenç Görevler',
-  zor: 'Zor Görevler',
-  sureli: 'Süreli Görevler',
-  sayili: 'Sayılı Görevler',
-  ortak: 'Ortak Görevler',
-  mini: 'Mini Oyunlar',
-  cift: 'Çift Görevleri',
-  tekli: 'Tekli Görevler'
-};
+// Removed CATEGORIES constant
 
 const Settings = ({ settings, setSettings, onNext }) => {
   const [activeTab, setActiveTab] = useState('genel');
-  const [expandedCategory, setExpandedCategory] = useState(null);
-  const [taskGenderTab, setTaskGenderTab] = useState('woman'); // 'woman' or 'man'
+  const [taskGenderTab, setTaskGenderTab] = useState('woman'); // 'woman', 'man', 'ortak'
 
-  // Kategorilere ve cinsiyete göre kartları grupla
-  const cardsByCategory = useMemo(() => {
-    const grouped = {};
-    Object.keys(CATEGORIES).forEach(c => grouped[c] = []);
-    MOCK_CARDS.forEach(card => {
-      if (card.target === taskGenderTab && grouped[card.category]) {
-        grouped[card.category].push(card);
-      }
-    });
-    return grouped;
+  // Sadece seçili cinseyete göre filtrele (Kategori Yok)
+  const filteredTasks = useMemo(() => {
+    return MOCK_CARDS.filter(card => card.target === taskGenderTab);
   }, [taskGenderTab]);
 
   const handleInputChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value === '' ? '' : Number(value) }));
   };
 
-  const toggleCategory = (cat) => {
-    setSettings(prev => ({
-      ...prev,
-      categories: { ...prev.categories, [cat]: !prev.categories[cat] }
-    }));
-  };
+  // toggleCategory removed
 
   const toggleTask = (taskId, e) => {
     e.stopPropagation();
@@ -172,6 +149,36 @@ const Settings = ({ settings, setSettings, onNext }) => {
           {/* GENEL AYARLAR */}
           {activeTab === 'genel' && (
             <motion.div key="genel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+
+              {/* Kaç Tur Oynanacak */}
+              <div style={{ marginBottom: '28px' }}>
+                <label style={{ display: 'block', color: 'var(--color-green)', fontWeight: 'bold', marginBottom: '8px', fontSize: '1rem' }}>
+                  🏆 Tur Sayısı
+                </label>
+                <p style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '12px' }}>
+                  Oyun toplam kaç tur oynansın? Her turun sonunda kaybeden ceza çeker ve puanlar birikir.
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[1, 3, 5, 7, 10].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleInputChange('roundCount', num)}
+                      style={{
+                        flex: 1, minWidth: '55px', padding: '14px 8px', borderRadius: '12px', border: 'none',
+                        background: (settings.roundCount || 1) === num
+                          ? 'linear-gradient(135deg, #2dc653, #1a5c2a)'
+                          : 'rgba(255,255,255,0.07)',
+                        color: 'white', fontWeight: '900', fontSize: '1.1rem',
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: (settings.roundCount || 1) === num ? '0 4px 15px rgba(45,198,83,0.5)' : 'none',
+                        border: (settings.roundCount || 1) === num ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent',
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* UNO Kart Sayısı */}
               <div style={{ marginBottom: '28px' }}>
@@ -314,13 +321,13 @@ const Settings = ({ settings, setSettings, onNext }) => {
             <motion.div key="gorevler" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               
               {/* Gender Toggle */}
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '5px', marginBottom: '20px' }}>
                 <button
                   onClick={() => setTaskGenderTab('woman')}
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                    flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
                     background: taskGenderTab === 'woman' ? 'var(--color-purple)' : 'rgba(0,0,0,0.3)',
-                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', fontSize: '0.8rem'
                   }}
                 >
                   👩 Kadın Görevleri
@@ -328,96 +335,62 @@ const Settings = ({ settings, setSettings, onNext }) => {
                 <button
                   onClick={() => setTaskGenderTab('man')}
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
+                    flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
                     background: taskGenderTab === 'man' ? 'var(--color-orange)' : 'rgba(0,0,0,0.3)',
-                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', fontSize: '0.8rem'
                   }}
                 >
                   👱‍♂️ Erkek Görevleri
                 </button>
+                <button
+                  onClick={() => setTaskGenderTab('ortak')}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '10px', border: 'none',
+                    background: taskGenderTab === 'ortak' ? 'var(--color-green)' : 'rgba(0,0,0,0.3)',
+                    color: 'white', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', fontSize: '0.8rem'
+                  }}
+                >
+                  🤝 Ortak (Unisex)
+                </button>
               </div>
 
               <p style={{ color: '#aaa', marginBottom: '20px', fontSize: '0.9rem' }}>
-                {taskGenderTab === 'woman' ? "Kadın oyuncuya" : "Erkek oyuncuya"} çıkacak görevleri düzenliyorsunuz.
+                {taskGenderTab === 'woman' ? "Kadın oyuncuya" : taskGenderTab === 'man' ? "Erkek oyuncuya" : "İki oyuncuya da rastgele"} çıkabilecek görevleri düzenliyorsunuz.
               </p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {Object.entries(CATEGORIES).map(([catId, catName]) => {
-                  const tasks = cardsByCategory[catId] || [];
-                  const isExpanded = expandedCategory === catId;
-                  const isEnabled = settings.categories[catId];
-
-                  return (
-                    <div key={catId} style={{ 
-                      background: 'rgba(0,0,0,0.3)', borderRadius: '12px', 
-                      border: `1px solid ${isEnabled ? 'rgba(43,147,72,0.3)' : 'rgba(208,0,0,0.3)'}`
-                    }}>
-                      <div 
-                        onClick={() => setExpandedCategory(isExpanded ? null : catId)}
-                        style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {isExpanded ? <ChevronDown size={20} color="#aaa" /> : <ChevronRight size={20} color="#aaa" />}
-                          <span style={{ fontWeight: 'bold', color: isEnabled ? 'white' : '#666' }}>{catName} ({tasks.length})</span>
+                {filteredTasks.length === 0 ? (
+                  <div style={{ padding: '20px', color: '#888', fontSize: '0.9rem', textAlign: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '12px' }}>
+                    Henüz bu grupta görev eklenmemiş. Yönetim panelinden veri eklediğinizde burada görünecektir.
+                  </div>
+                ) : (
+                  filteredTasks.map(task => {
+                    const isTaskEnabled = !settings.disabledTasks.includes(task.id);
+                    return (
+                      <div key={task.id} style={{ 
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                        padding: '15px', background: 'rgba(0,0,0,0.3)', borderRadius: '12px',
+                        border: `1px solid ${isTaskEnabled ? 'rgba(43,147,72,0.3)' : 'rgba(208,0,0,0.3)'}`,
+                        opacity: isTaskEnabled ? 1 : 0.5
+                      }}>
+                        <div style={{ flex: 1, paddingRight: '10px' }}>
+                          <p style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'white' }}>{task.title}</p>
+                          <p style={{ fontSize: '0.8rem', color: '#aaa', marginTop: '4px' }}>{task.text}</p>
                         </div>
-                        
                         <button 
-                          onClick={(e) => { e.stopPropagation(); toggleCategory(catId); }}
+                          onClick={(e) => toggleTask(task.id, e)}
                           style={{
-                            padding: '6px 12px', borderRadius: '20px', border: 'none',
-                            background: isEnabled ? 'var(--color-green)' : 'var(--color-red)',
-                            color: 'white', fontWeight: 'bold', fontSize: '0.8rem',
-                            display: 'flex', alignItems: 'center', gap: '4px'
+                            width: '44px', height: '26px', borderRadius: '13px', border: 'none',
+                            background: isTaskEnabled ? 'var(--color-purple)' : '#444',
+                            position: 'relative', cursor: 'pointer', flexShrink: 0
                           }}
                         >
-                          {isEnabled ? <Check size={14}/> : <X size={14}/>} {isEnabled ? 'AÇIK' : 'KAPALI'}
+                          <motion.div layout style={{ width: '20px', height: '20px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isTaskEnabled ? '21px' : '3px' }} />
                         </button>
                       </div>
-
-                      <AnimatePresence>
-                        {isExpanded && tasks.length > 0 && (
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0 }} 
-                            animate={{ height: 'auto', opacity: 1 }} 
-                            exit={{ height: 0, opacity: 0 }}
-                            style={{ overflow: 'hidden' }}
-                          >
-                            <div style={{ padding: '0 15px 15px 15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.1)', marginBottom: '8px' }} />
-                              {tasks.map(task => {
-                                const isTaskEnabled = !settings.disabledTasks.includes(task.id);
-                                return (
-                                  <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: isTaskEnabled && isEnabled ? 1 : 0.4 }}>
-                                    <div style={{ flex: 1, paddingRight: '10px' }}>
-                                      <p style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{task.title}</p>
-                                      <p style={{ fontSize: '0.75rem', color: '#999' }}>{task.text.substring(0, 40)}...</p>
-                                    </div>
-                                    <button 
-                                      onClick={(e) => toggleTask(task.id, e)}
-                                      disabled={!isEnabled}
-                                      style={{
-                                        width: '40px', height: '24px', borderRadius: '12px', border: 'none',
-                                        background: isTaskEnabled ? 'var(--color-purple)' : '#444',
-                                        position: 'relative', cursor: isEnabled ? 'pointer' : 'not-allowed'
-                                      }}
-                                    >
-                                      <motion.div layout style={{ width: '18px', height: '18px', background: 'white', borderRadius: '50%', position: 'absolute', top: '3px', left: isTaskEnabled ? '19px' : '3px' }} />
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </motion.div>
-                        )}
-                        {isExpanded && tasks.length === 0 && (
-                          <div style={{ padding: '15px', color: '#888', fontSize: '0.8rem', textAlign: 'center' }}>
-                            Henüz bu kategoride görev yok.
-                          </div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </motion.div>
           )}
