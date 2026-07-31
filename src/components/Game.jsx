@@ -502,7 +502,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
   const [gameStarted,     setGameStarted]     = useState(false);
   const [pendingDrawCount,setPendingDrawCount]= useState(0); // Manuel ceza kartı çekme sayısı
   const [pistiCard,       setPistiCard]       = useState(null);
-  const [commonTaskTimer, setCommonTaskTimer] = useState(0);
+  const [commonTaskTimeLeft, setCommonTaskTimeLeft] = useState(300);
   const gameDurationMs = (settings.duration || 60) * 60 * 1000;
 
   // ── UI durumu ─────────────────────────────────────────────────────────────
@@ -564,7 +564,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
       const hostStarts = Math.random() < 0.5;
       setIsMyTurn(hostStarts);
       setGameStarted(true);
-      setCommonTaskTimer(Date.now());
+      setCommonTaskTimeLeft(300);
 
       sendData({
         type: 'gameInit',
@@ -589,7 +589,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
         setPistiCard(data.pistiCard);
         setIsMyTurn(!data.hostStarts);
         setGameStarted(true);
-        setCommonTaskTimer(Date.now());
+        setCommonTaskTimeLeft(300);
         break;
 
       case 'cardPlayed':
@@ -626,6 +626,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
 
       case 'startTimer':
         setTaskTimerStarted(true);
+        break;
+
+      case 'diceRolling':
+        setTaskDiceResult('rolling');
         break;
 
       case 'diceRolled':
@@ -687,31 +691,33 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
 
   // ── Ortak Görev Zamanlayıcısı ──────────────────────────────────────────────
   useEffect(() => {
-    if (!gameStarted || role !== 'host') return;
+    if (!gameStarted || role !== 'host' || taskModal) return;
     const interval = setInterval(() => {
-      const elapsed = Date.now() - commonTaskTimer;
-      if (elapsed > 300000) { 
-        setCommonTaskTimer(Date.now()); 
-        const poolOrtak = (require('../data/cards').MOCK_COMMON_TASKS || []).filter(c => !usedTaskIds.includes(c.id));
-        if (poolOrtak.length > 0) {
-          const cardData = poolOrtak[Math.floor(Math.random() * poolOrtak.length)];
-          const card = {
-            id: 99000 + Math.random(),
-            type: CARD_TYPES.TASK,
-            taskData: cardData,
-            display: 'Ortak Görev'
-          };
-          if (cardData.id) setUsedTaskIds(prev => [...prev, cardData.id]);
-          sendData({ type: 'commonTaskTrigger', card });
-          setPendingTaskCard(card);
-          setTaskTimerStarted(false);
-          setTaskDiceResult(null);
-          setTaskModal({ card, isAttacker: true, isOrtak: true }); 
+      setCommonTaskTimeLeft(prev => {
+        if (prev <= 1) { 
+          const poolOrtak = (require('../data/cards').MOCK_COMMON_TASKS || []).filter(c => !usedTaskIds.includes(c.id));
+          if (poolOrtak.length > 0) {
+            const cardData = poolOrtak[Math.floor(Math.random() * poolOrtak.length)];
+            const card = {
+              id: 99000 + Math.random(),
+              type: CARD_TYPES.TASK,
+              taskData: cardData,
+              display: 'Ortak Görev'
+            };
+            if (cardData.id) setUsedTaskIds(prev => [...prev, cardData.id]);
+            sendData({ type: 'commonTaskTrigger', card });
+            setPendingTaskCard(card);
+            setTaskTimerStarted(false);
+            setTaskDiceResult(null);
+            setTaskModal({ card, isAttacker: true, isOrtak: true }); 
+          }
+          return 300;
         }
-      }
-    }, 10000);
+        return prev - 1;
+      });
+    }, 1000);
     return () => clearInterval(interval);
-  }, [gameStarted, role, commonTaskTimer, sendData, usedTaskIds, setUsedTaskIds]);
+  }, [gameStarted, role, taskModal, sendData, usedTaskIds, setUsedTaskIds]);
 
   // ── Kart oyna ─────────────────────────────────────────────────────────────
   const playCard = useCallback((card, idx) => {
@@ -905,9 +911,13 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
   }, [sendData]);
 
   const handleRollDice = useCallback(() => {
-    const val = Math.floor(Math.random() * 6) + 1;
-    setTaskDiceResult(val);
-    sendData({ type: 'diceRolled', value: val });
+    setTaskDiceResult('rolling');
+    sendData({ type: 'diceRolling' });
+    setTimeout(() => {
+      const val = Math.floor(Math.random() * 6) + 1;
+      setTaskDiceResult(val);
+      sendData({ type: 'diceRolled', value: val });
+    }, 1500);
   }, [sendData]);
 
   // ── Portal sürükleme (kaydırarak oyna) ────────────────────────────────────
