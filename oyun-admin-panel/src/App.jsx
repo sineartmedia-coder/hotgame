@@ -8,12 +8,18 @@ function App() {
 
   // Form states for Tasks
   const [taskText, setTaskText] = useState('');
-  const [penalty, setPenalty] = useState(2);
+  const [penalty, setPenalty] = useState('2');
   const [target, setTarget] = useState('ortak');
   const [isTimeBased, setIsTimeBased] = useState(false);
   const [duration, setDuration] = useState(60);
   const [isDiceBased, setIsDiceBased] = useState(false);
   const [isGame, setIsGame] = useState(false);
+
+  // Form states for Games (Ortak Görevler)
+  const [winnerDrawCount, setWinnerDrawCount] = useState('');
+  const [loserDrawCount, setLoserDrawCount] = useState('');
+  const [winnerMinusPoints, setWinnerMinusPoints] = useState('');
+  const [winType, setWinType] = useState('single');
 
   useEffect(() => {
     fetchData();
@@ -51,14 +57,20 @@ function App() {
     const newItem = {
       id: Date.now(),
       text: taskText,
-      points: penalty * 5,
-      penaltyAmount: parseInt(penalty, 10),
+      points: penalty === 'random' ? 0 : parseInt(penalty, 10) * 5,
+      penaltyAmount: penalty === 'random' ? 'random' : parseInt(penalty, 10),
       target: type === 'games' ? 'ortak' : target,
-      isTimeBased,
-      duration: isTimeBased ? parseInt(duration, 10) : 0,
-      isDiceBased,
-      isGame: type === 'games' ? true : isGame,
-      category: type === 'games' ? 'ortak' : (target === 'ortak' ? 'ortak' : 'normal')
+      isTimeBased: type === 'questions' ? false : isTimeBased,
+      duration: (type === 'questions' || !isTimeBased) ? 0 : parseInt(duration, 10),
+      isDiceBased: type === 'questions' ? false : isDiceBased,
+      isGame: type === 'games' ? true : (type === 'questions' ? false : isGame),
+      category: type === 'games' ? 'ortak' : (target === 'ortak' ? 'ortak' : 'normal'),
+      ...(type === 'games' ? {
+        winnerDrawCount: parseInt(winnerDrawCount || '0', 10),
+        loserDrawCount: parseInt(loserDrawCount || '0', 10),
+        winnerMinusPoints: parseInt(winnerMinusPoints || '0', 10),
+        winType: winType
+      } : {})
     };
 
     const newData = { ...data, [type]: [...(data[type] || []), newItem] };
@@ -108,16 +120,19 @@ function App() {
               </div>
 
               <div className="form-row">
-                <div className="form-group">
-                  <label>Ceza Miktarı (Kart)</label>
-                  <select value={penalty} onChange={e => setPenalty(e.target.value)}>
-                    {[1,2,3,4,5,6,7,8].map(n => (
-                      <option key={n} value={n}>+{n} Kart</option>
-                    ))}
-                  </select>
-                </div>
+                {activeTab === 'tasks' && (
+                  <div className="form-group">
+                    <label>Ceza Miktarı (Kart)</label>
+                    <select value={penalty} onChange={e => setPenalty(e.target.value)}>
+                      {[1,2,3,4,5,6,7,8].map(n => (
+                        <option key={n} value={n}>+{n} Kart</option>
+                      ))}
+                      <option value="random">Rastgele (1-8)</option>
+                    </select>
+                  </div>
+                )}
 
-                {activeTab !== 'games' && (
+                {activeTab === 'tasks' && (
                   <div className="form-group">
                     <label>Cinsiyet / Hedef</label>
                     <select value={target} onChange={e => setTarget(e.target.value)}>
@@ -127,33 +142,59 @@ function App() {
                     </select>
                   </div>
                 )}
+
+                {activeTab === 'games' && (
+                  <>
+                    <div className="form-group">
+                      <label>Kazanma Durumu</label>
+                      <select value={winType} onChange={e => setWinType(e.target.value)}>
+                        <option value="single">Tek Kişi Kazanır</option>
+                        <option value="both">İki Kişi (Ortak) Başarı</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Kazanan Kaç Kart Çeker?</label>
+                      <input type="number" value={winnerDrawCount} onChange={e => setWinnerDrawCount(e.target.value)} placeholder="0" />
+                    </div>
+                    <div className="form-group">
+                      <label>Kaybeden Kaç Kart Çeker?</label>
+                      <input type="number" value={loserDrawCount} onChange={e => setLoserDrawCount(e.target.value)} placeholder="0" />
+                    </div>
+                    <div className="form-group">
+                      <label>Kazanan Eksi Puanı</label>
+                      <input type="number" value={winnerMinusPoints} onChange={e => setWinnerMinusPoints(e.target.value)} placeholder="0 (Örn: -3 için 3 girin)" />
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="form-row options-row">
-                <label className="checkbox-label">
-                  <input type="checkbox" checked={isDiceBased} onChange={e => setIsDiceBased(e.target.checked)} />
-                  Zar Atılacak
-                </label>
-
-                <label className="checkbox-label">
-                  <input type="checkbox" checked={isTimeBased} onChange={e => setIsTimeBased(e.target.checked)} />
-                  Süreli
-                </label>
-
-                {isTimeBased && (
-                  <div className="form-group inline">
-                    <label>Süre (sn):</label>
-                    <input type="number" value={duration} onChange={e => setDuration(e.target.value)} style={{width: '80px'}}/>
-                  </div>
-                )}
-
-                {activeTab === 'tasks' && (
+              {activeTab !== 'questions' && (
+                <div className="form-row options-row">
                   <label className="checkbox-label">
-                    <input type="checkbox" checked={isGame} onChange={e => setIsGame(e.target.checked)} />
-                    Bu bir Mini Oyun Kartı
+                    <input type="checkbox" checked={isDiceBased} onChange={e => setIsDiceBased(e.target.checked)} />
+                    Zar Atılacak
                   </label>
-                )}
-              </div>
+
+                  <label className="checkbox-label">
+                    <input type="checkbox" checked={isTimeBased} onChange={e => setIsTimeBased(e.target.checked)} />
+                    Süreli
+                  </label>
+
+                  {isTimeBased && (
+                    <div className="form-group inline">
+                      <label>Süre (sn):</label>
+                      <input type="number" value={duration} onChange={e => setDuration(e.target.value)} style={{width: '80px'}}/>
+                    </div>
+                  )}
+
+                  {activeTab === 'tasks' && (
+                    <label className="checkbox-label">
+                      <input type="checkbox" checked={isGame} onChange={e => setIsGame(e.target.checked)} />
+                      Bu bir Mini Oyun Kartı
+                    </label>
+                  )}
+                </div>
+              )}
 
               <button type="submit" className="btn-primary">Karta Ekle</button>
             </form>
@@ -166,8 +207,15 @@ function App() {
                 <div key={item.id} className="card">
                   <p className="card-text">{item.text}</p>
                   <div className="card-meta">
-                    <span className="badge">Hedef: {item.target}</span>
-                    <span className="badge penalty">Ceza: +{item.penaltyAmount}</span>
+                    {activeTab !== 'questions' && <span className="badge">Hedef: {item.target}</span>}
+                    {activeTab === 'tasks' && <span className="badge penalty">Ceza: {item.penaltyAmount === 'random' ? 'Rastgele' : `+${item.penaltyAmount}`}</span>}
+                    {activeTab === 'games' && (
+                      <>
+                        <span className="badge">Kazanan Çeker: {item.winnerDrawCount}</span>
+                        <span className="badge penalty">Kaybeden Çeker: {item.loserDrawCount}</span>
+                        {item.winnerMinusPoints > 0 && <span className="badge">Puan Avantajı: -{item.winnerMinusPoints}</span>}
+                      </>
+                    )}
                     {item.isDiceBased && <span className="badge addon">🎲 Zar</span>}
                     {item.isTimeBased && <span className="badge addon">⏱ {item.duration}sn</span>}
                     {item.isGame && <span className="badge game">🎮 Oyun</span>}

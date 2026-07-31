@@ -1,7 +1,7 @@
 // ─── UNO Destesi ─────────────────────────────────────────────────────────────
 // Standart UNO: 4 renk × (0×1 + 1-9×2) + aksiyonlar (Skip, Reverse, +2) × 2/renk
 // + Wild × 4 + Wild+4 × 4
-// Bizim oyun: Skip = Pas, Reverse = Yön Değiştir, +2/+4 → Görev Kartları
+// Bizim oyun: Skip = Bloke/Soru, Reverse = YOK, +2/+4 → Görev Kartları
 
 export const UNO_COLORS = ['kırmızı', 'mavi', 'yeşil', 'sarı'];
 
@@ -22,8 +22,7 @@ export const COLOR_DARK = {
 // Kart tipleri
 export const CARD_TYPES = {
   NUMBER:  'number',   // 0-9
-  SKIP:    'skip',     // Pas
-  REVERSE: 'reverse',  // Yön Değiştir (2 kişide = Skip)
+  SKIP:    'skip',     // Bloke / Soru
   WILD:    'wild',     // Renk seç
   TASK:    'task',     // Görev kartı (oyunumuza özel - +2/+4 yerine)
 };
@@ -43,29 +42,26 @@ export function buildUnoDeck(mockQuestions = []) {
       deck.push({ id: id++, type: CARD_TYPES.NUMBER, color, value: n, display: String(n) });
     }
 
-    // Skip × 2
-    deck.push({ id: id++, type: CARD_TYPES.SKIP, color, value: 20, display: '🚫' });
-    deck.push({ id: id++, type: CARD_TYPES.SKIP, color, value: 20, display: '🚫' });
-
-    // Reverse × 2
-    deck.push({ id: id++, type: CARD_TYPES.REVERSE, color, value: 20, display: '🔄' });
-    deck.push({ id: id++, type: CARD_TYPES.REVERSE, color, value: 20, display: '🔄' });
+    // Skip (Bloke/Soru) × 2
+    for (let i = 0; i < 2; i++) {
+      let qData = null;
+      if (mockQuestions.length > 0) {
+        // Pick a random question
+        const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
+        qData = {
+          ...randomQ,
+          penaltyDo: 0,
+          penaltyFail: 0,
+          penaltyRefuse: 0
+        };
+      }
+      deck.push({ id: id++, type: CARD_TYPES.SKIP, color, value: 20, display: '⊘', questionData: qData });
+    }
   });
 
-  // Wild × 4
+  // Wild × 4 (Sadece renk değiştir)
   for (let i = 0; i < 4; i++) {
-    let qData = null;
-    if (mockQuestions.length > 0) {
-      // Pick a random question
-      const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
-      qData = {
-        ...randomQ,
-        penaltyDo: 0,
-        penaltyFail: randomQ.penaltyAmount || 3,
-        penaltyRefuse: randomQ.penaltyAmount ? randomQ.penaltyAmount + 2 : 5
-      };
-    }
-    deck.push({ id: id++, type: CARD_TYPES.WILD, color: 'wild', value: 50, display: '❓', questionData: qData });
+    deck.push({ id: id++, type: CARD_TYPES.WILD, color: 'wild', value: 50, display: 'W' });
   }
 
   return deck;
@@ -90,18 +86,28 @@ export function buildTaskCards(mockCards, taskCount, holderGender) {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const selected = shuffled.slice(0, taskCount);
 
-  return selected.map((card, i) => ({
-    id: 10000 + i,
-    type: CARD_TYPES.TASK,
-    color: 'wild',           // Görev kartları her renge atılabilir
-    value: card.points || 10,
-    display: `+${card.penaltyAmount || Math.max(2, Math.floor((card.points || 10) / 5))}`,
-    taskData: card,
-    // Ceza miktarları: admin panelden geliyorsa onu kullan, yoksa eski hesabı kullan
-    penaltyDo:     0, // Eskiden görevi yapana da kart çektiriyorduk, artık mantıksız olabilir ama 0 yapalım
-    penaltyRefuse: (card.penaltyAmount ? card.penaltyAmount + 2 : Math.max(4, Math.floor((card.points || 10) / 2.5))),
-    penaltyFail:   (card.penaltyAmount || Math.max(3, Math.floor((card.points || 10) / 3.5))),
-  }));
+  return selected.map((card, i) => {
+    let finalPenalty = card.penaltyAmount;
+    if (finalPenalty === 'random') {
+      finalPenalty = Math.floor(Math.random() * 8) + 1; // 1-8 arası
+    } else {
+      finalPenalty = parseInt(finalPenalty, 10);
+      if (isNaN(finalPenalty)) finalPenalty = Math.max(2, Math.floor((card.points || 10) / 5));
+    }
+
+    return {
+      id: 10000 + i,
+      type: CARD_TYPES.TASK,
+      color: 'wild',           // Görev kartları her renge atılabilir
+      value: card.points || 10,
+      display: card.penaltyAmount === 'random' ? 'Rastgele' : `+${finalPenalty}`,
+      taskData: card,
+      // Ceza miktarları: admin panelden geliyorsa onu kullan, yoksa eski hesabı kullan
+      penaltyDo:     0,
+      penaltyRefuse: finalPenalty + 2,
+      penaltyFail:   Math.max(3, finalPenalty - 1),
+    };
+  });
 }
 
 // Desteyi karıştır
@@ -170,7 +176,6 @@ export function canPlayCard(card, topCard, currentColor) {
   // Aynı değer/tip
   if (card.type === CARD_TYPES.NUMBER && topCard.type === CARD_TYPES.NUMBER && card.value === topCard.value) return true;
   if (card.type === CARD_TYPES.SKIP    && topCard.type === CARD_TYPES.SKIP)    return true;
-  if (card.type === CARD_TYPES.REVERSE && topCard.type === CARD_TYPES.REVERSE) return true;
   return false;
 }
 

@@ -277,28 +277,39 @@ const ZoomOverlay = ({ card, onClose }) => {
         <UnoCard card={card} size="lg" shadow />
       </motion.div>
 
-      {((card.type === CARD_TYPES.TASK && card.taskData) || (card.type === CARD_TYPES.WILD && card.questionData)) && (
+      {((card.type === CARD_TYPES.TASK && card.taskData) || (card.type === CARD_TYPES.SKIP && card.questionData)) && (
         <motion.div
           initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.15 }}
           onClick={e => e.stopPropagation()}
           style={{ background:'rgba(15,15,22,0.9)', borderRadius:'24px', padding:'24px', maxWidth:'340px', width:'100%', textAlign:'center', border:'1px solid rgba(255,60,0,0.3)', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' }}
         >
           {(() => {
-            const data = card.type === CARD_TYPES.WILD ? card.questionData : card.taskData;
+            const data = card.type === CARD_TYPES.SKIP ? card.questionData : card.taskData;
             return (
               <>
-                <h3 style={{ color:'#fff',fontWeight:'600',fontSize:'1.2rem',marginBottom:'12px' }}>{data.title || (card.type === CARD_TYPES.WILD ? 'Soru (Joker)' : 'Görev')}</h3>
+                <h3 style={{ color:'#fff',fontWeight:'600',fontSize:'1.2rem',marginBottom:'12px' }}>{data.title || (card.type === CARD_TYPES.SKIP ? 'Soru Kartı' : 'Görev')}</h3>
                 <p style={{ color:'rgba(255,255,255,0.7)',lineHeight:1.6,fontSize:'0.95rem',marginBottom:'10px' }}>{data.text}</p>
                 <div style={{ display:'flex',justifyContent:'center',gap:'8px',marginBottom:'20px' }}>
                   {data.isDiceBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎲 Zar At</span>}
                   {data.isTimeBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>⏱ {data.duration}sn</span>}
                   {data.isGame && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎮 Oyun</span>}
                 </div>
-                <div style={{ display:'flex',justifyContent:'center',gap:'8px',flexWrap:'wrap',fontSize:'0.8rem' }}>
-                  <span style={{ background:'rgba(46,125,50,0.2)',color:'#6bff4a',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(46,125,50,0.5)' }}>✅ Yapar/Cevaplar: +{card.penaltyDo}</span>
-                  <span style={{ background:'rgba(230,81,0,0.2)',color:'#ffb703',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(230,81,0,0.5)' }}>😅 Yapamaz/Bilemez: +{card.penaltyFail}</span>
-                  <span style={{ background:'rgba(198,40,40,0.2)',color:'#ff3366',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(198,40,40,0.5)' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
-                </div>
+                {card.type === CARD_TYPES.TASK && (
+                  <div style={{ display:'flex',justifyContent:'center',gap:'8px',flexWrap:'wrap',fontSize:'0.8rem' }}>
+                    {data.target === 'ortak' ? (
+                      <>
+                        <span style={{ background:'rgba(46,125,50,0.2)',color:'#6bff4a',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(46,125,50,0.5)' }}>Kazanan Çeker: {data.winnerDrawCount || 0}</span>
+                        <span style={{ background:'rgba(198,40,40,0.2)',color:'#ff3366',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(198,40,40,0.5)' }}>Kaybeden Çeker: {data.loserDrawCount || 0}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ background:'rgba(46,125,50,0.2)',color:'#6bff4a',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(46,125,50,0.5)' }}>✅ Yapar: +{card.penaltyDo}</span>
+                        <span style={{ background:'rgba(230,81,0,0.2)',color:'#ffb703',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(230,81,0,0.5)' }}>😅 Yapamaz: +{card.penaltyFail}</span>
+                        <span style={{ background:'rgba(198,40,40,0.2)',color:'#ff3366',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(198,40,40,0.5)' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </>
             );
           })()}
@@ -310,8 +321,8 @@ const ZoomOverlay = ({ card, onClose }) => {
 };
 
 // ─── Görev Modal (bottom sheet) ───────────────────────────────────────────────
-const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, onClose }) => {
-  const isQuestion = card?.type === CARD_TYPES.WILD;
+const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, onResult, onClose }) => {
+  const isQuestion = card?.type === CARD_TYPES.SKIP && card?.questionData;
   const data = isQuestion ? card?.questionData : card?.taskData;
   if (!data) return null;
   
@@ -330,7 +341,7 @@ const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, o
             {isAttacker ? '⚔️' : opponentAvatar}
           </div>
           <h3 style={{ color: '#fff', fontSize:'1.4rem',fontWeight:'300', letterSpacing: '1px' }}>
-            {isAttacker ? (isQuestion ? `${opponentName}'a Soru!` : `${opponentName}'a Görev!`) : (isQuestion ? '🎯 Sana Soru Geldi!' : '🎯 Sana Görev Geldi!')}
+            {isAttacker ? (isQuestion ? `${opponentName}'a Soru!` : (isOrtak ? 'Ortak Görev!' : `${opponentName}'a Görev!`)) : (isQuestion ? '🎯 Sana Soru Geldi!' : (isOrtak ? 'Ortak Görev!' : '🎯 Sana Görev Geldi!'))}
           </h3>
         </div>
         <div style={{ background:'rgba(255,255,255,0.03)',borderRadius:'20px',padding:'20px',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'20px' }}>
@@ -342,32 +353,97 @@ const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, o
             {data.isGame && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎮 Mini Oyun</span>}
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.8rem', color: '#6bff4a', background: 'rgba(107,255,74,0.1)', padding: '6px 12px', borderRadius: '12px' }}>✅ Yapar/Cevaplar: +{card.penaltyDo}</span>
-          <span style={{ fontSize: '0.8rem', color: '#ffb703', background: 'rgba(255,183,3,0.1)', padding: '6px 12px', borderRadius: '12px' }}>😅 Yapamaz/Bilemez: +{card.penaltyFail}</span>
-          <span style={{ fontSize: '0.8rem', color: '#ff3366', background: 'rgba(255,51,102,0.1)', padding: '6px 12px', borderRadius: '12px' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
-        </div>
+        
+        {!isQuestion && !isOrtak && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.8rem', color: '#6bff4a', background: 'rgba(107,255,74,0.1)', padding: '6px 12px', borderRadius: '12px' }}>✅ Yapar: +{card.penaltyDo}</span>
+            <span style={{ fontSize: '0.8rem', color: '#ffb703', background: 'rgba(255,183,3,0.1)', padding: '6px 12px', borderRadius: '12px' }}>😅 Yapamaz: +{card.penaltyFail}</span>
+            <span style={{ fontSize: '0.8rem', color: '#ff3366', background: 'rgba(255,51,102,0.1)', padding: '6px 12px', borderRadius: '12px' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
+          </div>
+        )}
 
-        {isAttacker && (
+        {isQuestion && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+             <span style={{ fontSize: '0.8rem', color: '#6bff4a', background: 'rgba(107,255,74,0.1)', padding: '6px 12px', borderRadius: '12px' }}>Cevap ver ve sırayı atla!</span>
+          </div>
+        )}
+
+        {isOrtak && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+             <span style={{ fontSize: '0.8rem', color: '#6bff4a', background: 'rgba(107,255,74,0.1)', padding: '6px 12px', borderRadius: '12px' }}>Kazanan: {data.winnerDrawCount} Kart</span>
+             <span style={{ fontSize: '0.8rem', color: '#ff3366', background: 'rgba(255,51,102,0.1)', padding: '6px 12px', borderRadius: '12px' }}>Kaybeden: {data.loserDrawCount} Kart</span>
+             {data.winnerMinusPoints > 0 && <span style={{ fontSize: '0.8rem', color: '#00e5ff', background: 'rgba(0,229,255,0.1)', padding: '6px 12px', borderRadius: '12px' }}>Avantaj: -{data.winnerMinusPoints} Puan</span>}
+          </div>
+        )}
+
+        {isAttacker && !isOrtak && (
           <motion.button whileTap={{ scale:0.95 }} onClick={onClose}
             style={{ width:'100%',padding:'18px',background:'linear-gradient(135deg,#ff7900,#f5af19)',color:'white',border:'none',borderRadius:'16px',fontWeight:'800',fontSize:'1.1rem',cursor:'pointer', boxShadow: '0 8px 20px rgba(255,121,0,0.4)' }}>
             {isQuestion ? 'SORUYU GÖNDER' : 'GÖREVİ GÖNDER'}
           </motion.button>
         )}
-        {!isAttacker && onResult && (
+
+        {isAttacker && isOrtak && onResult && (
           <div style={{ display:'flex',flexDirection:'column',gap:'12px' }}>
-            <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
-              style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-              {isQuestion ? `✅ Cevapladım! (+${card.penaltyDo} kart)` : `✅ Yaptım! (+${card.penaltyDo} kart)`}
-            </motion.button>
-            <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('fail')}
-              style={{ padding:'16px',background:'linear-gradient(135deg, #e65100, #f57c00)',color:'white',border:'1px solid rgba(255,183,3,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-              {isQuestion ? `😅 Cevaplayamadım (+${card.penaltyFail} kart)` : `😅 Yapamadım (+${card.penaltyFail} kart)`}
-            </motion.button>
-            <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('refuse')}
-              style={{ padding:'16px',background:'background:linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-              🚫 Reddediyorum (+{card.penaltyRefuse} kart)
-            </motion.button>
+            {data.winType === 'single' ? (
+              <>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'me' })}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  Ben Kazandım
+                </motion.button>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'them' })}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  Rakip Kazandı
+                </motion.button>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'none' })}
+                  style={{ padding:'16px',background:'transparent',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  Berabere (İptal)
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'both' })}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  Evet, Yaptık!
+                </motion.button>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'none' })}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  Hayır, Yapamadık!
+                </motion.button>
+              </>
+            )}
+          </div>
+        )}
+
+        {!isAttacker && isOrtak && (
+          <div style={{ textAlign: 'center', padding: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '1rem', fontStyle: 'italic' }}>
+            Sonuç bekleniyor...
+          </div>
+        )}
+
+        {!isAttacker && !isOrtak && onResult && (
+          <div style={{ display:'flex',flexDirection:'column',gap:'12px' }}>
+            {isQuestion ? (
+              <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
+                style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                ✅ Devam Et
+              </motion.button>
+            ) : (
+              <>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  ✅ Yaptım! (+{card.penaltyDo} kart)
+                </motion.button>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('fail')}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #e65100, #f57c00)',color:'white',border:'1px solid rgba(255,183,3,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  😅 Yapamadım (+{card.penaltyFail} kart)
+                </motion.button>
+                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('refuse')}
+                  style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+                  🚫 Reddediyorum (+{card.penaltyRefuse} kart)
+                </motion.button>
+              </>
+            )}
           </div>
         )}
       </motion.div>
@@ -499,27 +575,47 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         setTimeout(() => setAnimCard(null), 700);
 
         if (data.handCount === 0) { setGameOver({ iWon: false }); return; }
-        if (data.card.type === CARD_TYPES.SKIP || data.card.type === CARD_TYPES.REVERSE) {
+        
+        if (data.card.type === CARD_TYPES.TASK) {
+          if (data.card.taskData?.target === 'ortak') {
+            setPendingTaskCard(data.card);
+            setTaskModal({ card: data.card, isAttacker: false, isOrtak: true });
+            return;
+          }
+          setPendingTaskCard(data.card);
+          setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
+          return;
+        }
+        if (data.card.type === CARD_TYPES.SKIP) {
+          if (data.card.questionData) {
+            setPendingTaskCard(data.card);
+            setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
+            return;
+          }
+          // if no question data, just skip normally
           setIsMyTurn(false);
           showNotif(`${players[opponentGender]?.name} sıranı atladı! ⊘`, '#ff3366');
-          return;
-        }
-        if (data.card.type === CARD_TYPES.TASK) {
-          setPendingTaskCard(data.card);
-          setTaskModal({ card: data.card, isAttacker: false });
-          return;
-        }
-        if (data.card.type === CARD_TYPES.WILD && data.card.questionData) {
-          setPendingTaskCard(data.card);
-          setTaskModal({ card: data.card, isAttacker: false });
           return;
         }
         setIsMyTurn(true);
         break;
 
       case 'taskResult':
-        {
-          showNotif(`Rakip görevi ${data.resultLabel}! ${data.penalty > 0 ? data.penalty + ' kart çekiyor...' : 'Ceza yok!'}`, '#ffcc00', 4000);
+        if (data.result === 'ortak_resolved') {
+          // Both receive this if one handles it, but since Attacker handles it and sends to defender:
+          const { meDraw, themDraw, meMinus, themMinus, message } = data;
+          showNotif(message, '#ffcc00', 4000);
+          // 'meDraw' means the one who resolved it (Attacker) draws. So defender (us) draws 'themDraw'.
+          if (themDraw > 0) setPendingDrawCount(themDraw);
+          if (themMinus > 0) {
+            setPlayers(p => ({ ...p, [localPlayer]: { ...p[localPlayer], score: (p[localPlayer].score || 0) - themMinus } }));
+          }
+          // Diğer oyuncunun da puanını güncelleyelim ki lokal ekranda doğru görünsün
+          if (meMinus > 0) {
+             setPlayers(p => ({ ...p, [opponentGender]: { ...p[opponentGender], score: (p[opponentGender].score || 0) - meMinus } }));
+          }
+        } else {
+          showNotif(`Rakip görevi/soruyu ${data.resultLabel}! ${data.penalty > 0 ? data.penalty + ' kart çekiyor...' : 'Ceza yok!'}`, '#ffcc00', 4000);
         }
         break;
 
@@ -577,18 +673,26 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       setGameOver({ iWon: true });
       return;
     }
+    
     if (card.type === CARD_TYPES.TASK) {
-      // Modala gerek yok, rakip onaylayacak. A sadece beklesin.
+      if (card.taskData?.target === 'ortak') {
+        // Ortak görevse biz yönetiyoruz, rakip bekliyor
+        setPendingTaskCard(card);
+        setTaskModal({ card, isAttacker: true, isOrtak: true });
+        return;
+      }
       setIsMyTurn(false);
       showNotif('Görev rakibe iletildi, cevap bekleniyor... ⏳', '#ff7900', 0);
       return;
     }
-    if (card.type === CARD_TYPES.WILD && card.questionData) {
-      setIsMyTurn(false);
-      showNotif('Soru rakibe iletildi, cevap bekleniyor... ⏳', '#ff7900', 0);
-      return;
-    }
-    if (card.type === CARD_TYPES.SKIP || card.type === CARD_TYPES.REVERSE) {
+    
+    if (card.type === CARD_TYPES.SKIP) {
+      if (card.questionData) {
+        // Rakip cevaplayacak ve pas geçecek
+        setIsMyTurn(false);
+        showNotif('Soru rakibe iletildi, devam etmesi bekleniyor... ⏳', '#ff7900', 0);
+        return;
+      }
       showNotif('Sırayı atladın! ⊘ Tekrar sen oynuyorsun.', '#33eeff');
       return;
     }
@@ -640,11 +744,63 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   }, [drawnCard, pendingDrawCount, sendData, showNotif]);
 
   // ── Görev sonucu ──────────────────────────────────────────────────────────
-  const handleTaskResult = useCallback((result) => {
+  const handleTaskResult = useCallback((result, extraData = null) => {
     if (!pendingTaskCard) return;
     const card = pendingTaskCard;
+    const data = card.taskData || {};
+
+    if (result === 'ortak_resolved') {
+      const winner = extraData.winner; // 'me', 'them', 'both', 'none'
+      let meDraw = 0, themDraw = 0;
+      let meMinus = 0, themMinus = 0;
+      let message = 'Görev İptal / Berabere!';
+
+      if (winner === 'me') {
+        meDraw = data.winnerDrawCount || 0;
+        meMinus = data.winnerMinusPoints || 0;
+        themDraw = data.loserDrawCount || 0;
+        message = 'Sen Kazandın! 🎉';
+      } else if (winner === 'them') {
+        themDraw = data.winnerDrawCount || 0;
+        themMinus = data.winnerMinusPoints || 0;
+        meDraw = data.loserDrawCount || 0;
+        message = 'Rakip Kazandı! 💥';
+      } else if (winner === 'both') {
+        meDraw = data.winnerDrawCount || 0;
+        meMinus = data.winnerMinusPoints || 0;
+        themDraw = data.winnerDrawCount || 0;
+        themMinus = data.winnerMinusPoints || 0;
+        message = 'İkiniz de Başardınız! 🎊';
+      }
+
+      setTaskModal(null);
+      setPendingTaskCard(null);
+
+      if (meMinus > 0) {
+        setPlayers(p => ({ ...p, [localPlayer]: { ...p[localPlayer], score: (p[localPlayer].score || 0) - meMinus } }));
+      }
+      if (themMinus > 0) {
+        setPlayers(p => ({ ...p, [opponentGender]: { ...p[opponentGender], score: (p[opponentGender].score || 0) - themMinus } }));
+      }
+      
+      if (meDraw > 0) setPendingDrawCount(meDraw);
+
+      sendData({ 
+        type: 'taskResult', 
+        result: 'ortak_resolved',
+        meDraw, themDraw, meMinus, themMinus,
+        message: message
+      });
+
+      // After resolving, since attacker played the card, it's now the defender's turn.
+      setIsMyTurn(false);
+      sendData({ type: 'turnPass' });
+      showNotif(message, '#00e5ff', 4000);
+      return;
+    }
+
     const penalty = result === 'done' ? card.penaltyDo : result === 'fail' ? card.penaltyFail : card.penaltyRefuse;
-    const label   = result === 'done' ? 'Yaptın' : result === 'fail' ? 'Yapamadın' : 'Reddettin';
+    const label   = result === 'done' ? 'Devam Edildi' : result === 'fail' ? 'Yapamadın' : 'Reddettin';
 
     setTaskModal(null);
     setPendingTaskCard(null);
@@ -653,13 +809,13 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     sendData({ type: 'taskResult', result, penalty, resultLabel: label });
 
     if (penalty === 0) {
-      showNotif(`${card.type === CARD_TYPES.WILD ? 'Soru' : 'Görev'} sonucu: ${label}! Ceza almadın. Sıra rakipte.`, '#6bff4a');
+      showNotif(`${card.type === CARD_TYPES.SKIP ? 'Soru' : 'Görev'} cevaplandı/yapıldı! Ceza almadın. Sıra rakipte.`, '#6bff4a');
       setTimeout(() => {
         sendData({ type: 'turnPass' });
       }, 300);
     } else {
       setPendingDrawCount(penalty);
-      showNotif(`${card.type === CARD_TYPES.WILD ? 'Soru' : 'Görev'} sonucu: ${label}! Desteden ${penalty} KART ÇEKMELİSİN.`, '#ff3366', 0);
+      showNotif(`${card.type === CARD_TYPES.SKIP ? 'Soru' : 'Görev'} sonucu: ${label}! Desteden ${penalty} KART ÇEKMELİSİN.`, '#ff3366', 0);
     }
   }, [pendingTaskCard, sendData, showNotif]);
 
