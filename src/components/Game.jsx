@@ -322,7 +322,7 @@ const ZoomOverlay = ({ card, onClose }) => {
 
 // ─── Görev Modal (bottom sheet) ───────────────────────────────────────────────
 const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, onResult, onClose, timerStarted, diceResult, onStartTimer, onRollDice }) => {
-  const isQuestion = card?.type === CARD_TYPES.SKIP && card?.questionData;
+  const isQuestion = !!card?.questionData;
   const data = isQuestion ? card?.questionData : card?.taskData;
   
   // Timer state
