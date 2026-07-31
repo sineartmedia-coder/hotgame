@@ -595,7 +595,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
           setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
           return;
         }
-        if (data.card.type === CARD_TYPES.SKIP) {
+        if (data.card.type === CARD_TYPES.SKIP || data.card.type === CARD_TYPES.REVERSE) {
           if (data.card.questionData) {
             if (data.card.questionData.id) setUsedTaskIds(prev => [...prev, data.card.questionData.id]);
             setPendingTaskCard(data.card);
@@ -604,7 +604,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
           }
           // if no question data, just skip normally
           setIsMyTurn(false);
-          showNotif(`${players[opponentGender]?.name} sıranı atladı! ⊘`, '#ff3366');
+          showNotif(`${players[opponentGender]?.name} sıranı ${data.card.type === CARD_TYPES.SKIP ? 'atladı' : 'döndürdü'}! ⊘`, '#ff3366');
           return;
         }
         setIsMyTurn(true);
@@ -731,7 +731,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
       return;
     }
     
-    if (card.type === CARD_TYPES.SKIP) {
+    if (card.type === CARD_TYPES.SKIP || card.type === CARD_TYPES.REVERSE) {
       if (card.questionData) {
         if (card.questionData.id) setUsedTaskIds(prev => [...prev, card.questionData.id]);
         // Rakip cevaplayacak ve pas geçecek
@@ -739,7 +739,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
         showNotif('Soru rakibe iletildi, devam etmesi bekleniyor... ⏳', '#ff7900', 0);
         return;
       }
-      showNotif('Sırayı atladın! ⊘ Tekrar sen oynuyorsun.', '#33eeff');
+      showNotif(`Sırayı ${card.type === CARD_TYPES.SKIP ? 'atladın' : 'döndürdün'}! ⊘ Tekrar sen oynuyorsun.`, '#33eeff');
       return;
     }
     setIsMyTurn(false);
