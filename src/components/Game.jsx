@@ -321,7 +321,7 @@ const ZoomOverlay = ({ card, onClose }) => {
 };
 
 // ─── Görev Modal (bottom sheet) ───────────────────────────────────────────────
-const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, onResult, onClose }) => {
+const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, onResult, onClose, timerStarted, diceResult, onStartTimer, onRollDice }) => {
   const isQuestion = card?.type === CARD_TYPES.SKIP && card?.questionData;
   const data = isQuestion ? card?.questionData : card?.taskData;
   
@@ -329,12 +329,12 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
   const [timeLeft, setTimeLeft] = useState(data?.isTimeBased ? data.duration : null);
 
   useEffect(() => {
-    if (!data?.isTimeBased || timeLeft === null || timeLeft <= 0) return;
+    if (!data?.isTimeBased || timeLeft === null || timeLeft <= 0 || !timerStarted) return;
     const timerId = setInterval(() => {
       setTimeLeft(prev => prev - 1);
     }, 1000);
     return () => clearInterval(timerId);
-  }, [data?.isTimeBased, timeLeft]);
+  }, [data?.isTimeBased, timeLeft, timerStarted]);
 
   if (!data) return null;
   
@@ -364,6 +364,23 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
             {data.isGame && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎮 Mini Oyun</span>}
           </div>
 
+          {data.isDiceBased && (
+            <div style={{ textAlign: 'center', margin: '20px 0', padding: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: '16px' }}>
+              {diceResult ? (
+                <div style={{ fontSize: '4rem', textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>🎲 {diceResult}</div>
+              ) : (
+                !isAttacker && !isOrtak ? (
+                  <motion.button whileTap={{ scale:0.95 }} onClick={onRollDice}
+                    style={{ padding:'16px 32px',background:'linear-gradient(135deg, #9d4edd, #5a189a)',color:'white',border:'none',borderRadius:'16px',fontWeight:'800',fontSize:'1.2rem',cursor:'pointer', boxShadow: '0 8px 20px rgba(157,78,221,0.4)' }}>
+                    🎲 ZAR AT
+                  </motion.button>
+                ) : (
+                  <div style={{ color: '#aaa', fontStyle: 'italic' }}>Zar atılması bekleniyor...</div>
+                )
+              )}
+            </div>
+          )}
+
           {data.isTimeBased && (
             <div style={{ textAlign: 'center', margin: '20px 0' }}>
               <div style={{ 
@@ -374,8 +391,14 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
                 ⏱ {timeLeft}
               </div>
               <p style={{ color: timeLeft > 0 ? '#aaa' : '#ff3366', fontWeight: 'bold' }}>
-                {timeLeft > 0 ? 'Saniye Kaldı!' : 'SÜRE BİTTİ!'}
+                {timeLeft > 0 ? (timerStarted ? 'Saniye Kaldı!' : 'Süre Bekleniyor...') : 'SÜRE BİTTİ!'}
               </p>
+              {isAttacker && !timerStarted && !isOrtak && (
+                <motion.button whileTap={{ scale:0.95 }} onClick={onStartTimer}
+                  style={{ marginTop:'12px', padding:'12px 24px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'none',borderRadius:'12px',fontWeight:'700',fontSize:'1.1rem',cursor:'pointer' }}>
+                  ⏱ SÜREYİ BAŞLAT
+                </motion.button>
+              )}
             </div>
           )}
         </div>
@@ -402,74 +425,35 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
           </div>
         )}
 
-        {isAttacker && !isOrtak && (
-          <motion.button whileTap={{ scale:0.95 }} onClick={onClose}
-            style={{ width:'100%',padding:'18px',background:'linear-gradient(135deg,#ff7900,#f5af19)',color:'white',border:'none',borderRadius:'16px',fontWeight:'800',fontSize:'1.1rem',cursor:'pointer', boxShadow: '0 8px 20px rgba(255,121,0,0.4)' }}>
-            {isQuestion ? 'SORUYU GÖNDER' : 'GÖREVİ GÖNDER'}
-          </motion.button>
-        )}
-
-        {isAttacker && isOrtak && onResult && (
-          <div style={{ display:'flex',flexDirection:'column',gap:'12px' }}>
-            {data.winType === 'single' ? (
-              <>
-                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'me' })}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  Ben Kazandım
-                </motion.button>
-                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'them' })}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  Rakip Kazandı
-                </motion.button>
-                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'none' })}
-                  style={{ padding:'16px',background:'transparent',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  Berabere (İptal)
-                </motion.button>
-              </>
-            ) : (
-              <>
-                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'both' })}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  Evet, Yaptık!
-                </motion.button>
-                <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('ortak_resolved', { winner: 'none' })}
-                  style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  Hayır, Yapamadık!
-                </motion.button>
-              </>
-            )}
-          </div>
-        )}
-
-        {!isAttacker && isOrtak && (
-          <div style={{ textAlign: 'center', padding: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '1rem', fontStyle: 'italic' }}>
-            Sonuç bekleniyor...
-          </div>
-        )}
-
-        {!isAttacker && !isOrtak && onResult && (
+        {isAttacker && !isOrtak && onResult && (
           <div style={{ display:'flex',flexDirection:'column',gap:'12px' }}>
             {isQuestion ? (
               <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
                 style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                ✅ Devam Et
+                ✅ CEVAPLADI
               </motion.button>
             ) : (
               <>
                 <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
                   style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  ✅ Yaptım! (+{card.penaltyDo} kart)
+                  ✅ YAPTI (+{card.penaltyDo} kart cezası gönder)
                 </motion.button>
                 <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('fail')}
                   style={{ padding:'16px',background:'linear-gradient(135deg, #e65100, #f57c00)',color:'white',border:'1px solid rgba(255,183,3,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  😅 Yapamadım (+{card.penaltyFail} kart)
+                  😅 YAPAMADI (+{card.penaltyFail} kart cezası gönder)
                 </motion.button>
                 <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('refuse')}
                   style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-                  🚫 Reddediyorum (+{card.penaltyRefuse} kart)
+                  🚫 REDDETTİ (+{card.penaltyRefuse} kart cezası gönder)
                 </motion.button>
               </>
             )}
+          </div>
+        )}
+
+        {!isAttacker && !isOrtak && (
+          <div style={{ textAlign: 'center', padding: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', fontStyle: 'italic' }}>
+            Rakibin kararı bekleniyor...
           </div>
         )}
       </motion.div>
@@ -526,6 +510,8 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
   const [pendingCard,     setPendingCard]     = useState(null);
   const [taskModal,       setTaskModal]       = useState(null);
   const [pendingTaskCard, setPendingTaskCard] = useState(null);
+  const [taskTimerStarted, setTaskTimerStarted] = useState(false);
+  const [taskDiceResult, setTaskDiceResult] = useState(null);
   const [notification,    setNotification]    = useState(null);
   const [zoomedCard,      setZoomedCard]      = useState(null);
   const [drawnCard,       setDrawnCard]       = useState(null);
@@ -616,8 +602,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
         if (data.handCount === 0) { setGameOver({ iWon: false }); return; }
         
         if (data.card.type === CARD_TYPES.TASK) {
-          // Rakip görev kartı attı. Biz savunanız.
           setPendingTaskCard(data.card);
+          setTaskTimerStarted(false);
+          setTaskDiceResult(null);
           setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
           return;
         }
@@ -625,15 +612,24 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
           if (data.card.questionData) {
             if (data.card.questionData.id) setUsedTaskIds(prev => [...prev, data.card.questionData.id]);
             setPendingTaskCard(data.card);
+            setTaskTimerStarted(false);
+            setTaskDiceResult(null);
             setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
             return;
           }
-          // if no question data, just skip normally
           setIsMyTurn(false);
           showNotif(`${players[opponentGender]?.name} sıranı ${data.card.type === CARD_TYPES.SKIP ? 'atladı' : 'döndürdü'}! ⊘`, '#ff3366');
           return;
         }
         setIsMyTurn(true);
+        break;
+
+      case 'startTimer':
+        setTaskTimerStarted(true);
+        break;
+
+      case 'diceRolled':
+        setTaskDiceResult(data.value);
         break;
 
       case 'taskResult':
@@ -648,21 +644,23 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
              setPlayers(p => ({ ...p, [opponentGender]: { ...p[opponentGender], score: (p[opponentGender].score || 0) - meMinus } }));
           }
           setTaskModal(null);
+          setPendingTaskCard(null);
         } else {
-          // Bu bir normal görev sonucudur. Attacker "yaptı" veya "yapamadı" seçti, defender olarak sonucu ve cezayı alıyoruz.
           const { penalty, resultLabel } = data;
           showNotif(`Görev Sonucu: ${resultLabel}! ${penalty > 0 ? penalty + ' ceza kartı alıyorsun.' : 'Ceza yok.'}`, '#ffcc00', 4000);
           if (penalty > 0) setPendingDrawCount(penalty);
           setTaskModal(null);
+          setPendingTaskCard(null);
         }
         break;
 
       case 'commonTaskTrigger':
-        // Ortak görev tetiklendi! İki oyuncuya da aynı anda çıkar.
         const commonCard = data.card;
         if (commonCard.taskData?.id) setUsedTaskIds(prev => [...prev, commonCard.taskData.id]);
         setPendingTaskCard(commonCard);
-        setTaskModal({ card: commonCard, isAttacker: role === 'host', isOrtak: true }); // Sadece Host kararı verir!
+        setTaskTimerStarted(false);
+        setTaskDiceResult(null);
+        setTaskModal({ card: commonCard, isAttacker: role === 'host', isOrtak: true });
         break;
 
       case 'cardDrawn':
@@ -680,7 +678,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
 
       default: break;
     }
-  }, [opponentGender, players, showNotif]);
+  }, [opponentGender, players, showNotif, role, setPlayers, setUsedTaskIds, localPlayer]);
 
   useEffect(() => {
     const unsub = onData(handleData);
@@ -691,11 +689,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
   useEffect(() => {
     if (!gameStarted || role !== 'host') return;
     const interval = setInterval(() => {
-      // Rastgele bir zamanda veya 5 dakikada bir (Şimdilik test için 5 dakika = 300,000 ms, ama biz her 1 dakikada %10 şans verelim)
-      // Kullanıcı "5 dakika içerisinde oyun bitmemişse aniden ortaya çıkacak" dedi.
       const elapsed = Date.now() - commonTaskTimer;
-      if (elapsed > 300000) { // 5 dakika (300 saniye)
-        setCommonTaskTimer(Date.now()); // Süreyi sıfırla
+      if (elapsed > 300000) { 
+        setCommonTaskTimer(Date.now()); 
         const poolOrtak = (require('../data/cards').MOCK_COMMON_TASKS || []).filter(c => !usedTaskIds.includes(c.id));
         if (poolOrtak.length > 0) {
           const cardData = poolOrtak[Math.floor(Math.random() * poolOrtak.length)];
@@ -708,12 +704,14 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
           if (cardData.id) setUsedTaskIds(prev => [...prev, cardData.id]);
           sendData({ type: 'commonTaskTrigger', card });
           setPendingTaskCard(card);
-          setTaskModal({ card, isAttacker: true, isOrtak: true }); // Host yönetir
+          setTaskTimerStarted(false);
+          setTaskDiceResult(null);
+          setTaskModal({ card, isAttacker: true, isOrtak: true }); 
         }
       }
-    }, 10000); // Her 10 saniyede bir kontrol et
+    }, 10000);
     return () => clearInterval(interval);
-  }, [gameStarted, role, commonTaskTimer, sendData, usedTaskIds]);
+  }, [gameStarted, role, commonTaskTimer, sendData, usedTaskIds, setUsedTaskIds]);
 
   // ── Kart oyna ─────────────────────────────────────────────────────────────
   const playCard = useCallback((card, idx) => {
@@ -749,27 +747,31 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
     }
     
     if (card.type === CARD_TYPES.TASK) {
-      // Biz görev kartı attık. Biz attacker'ız.
       if (card.taskData?.id) setUsedTaskIds(prev => [...prev, card.taskData.id]);
       setPendingTaskCard(card);
+      setTaskTimerStarted(false);
+      setTaskDiceResult(null);
       setTaskModal({ card, isAttacker: true, isOrtak: false });
-      // Sıramız BİTMİYOR! Görev atıldıktan sonra normal kart atmaya devam edebilmeliyiz.
       return;
     }
     
     if (card.type === CARD_TYPES.SKIP || card.type === CARD_TYPES.REVERSE) {
       if (card.questionData) {
         if (card.questionData.id) setUsedTaskIds(prev => [...prev, card.questionData.id]);
-        // Rakip cevaplayacak ve pas geçecek
+        
+        setPendingTaskCard(card);
+        setTaskTimerStarted(false);
+        setTaskDiceResult(null);
+        setTaskModal({ card, isAttacker: true, isOrtak: false });
+
         setIsMyTurn(false);
-        showNotif('Soru rakibe iletildi, devam etmesi bekleniyor... ⏳', '#ff7900', 0);
         return;
       }
       showNotif(`Sırayı ${card.type === CARD_TYPES.SKIP ? 'atladın' : 'döndürdün'}! ⊘ Tekrar sen oynuyorsun.`, '#33eeff');
       return;
     }
     setIsMyTurn(false);
-  }, [myHand, sendData, showNotif]);
+  }, [myHand, sendData, showNotif, setUsedTaskIds]);
 
   const handleColorSelect = (color) => {
     setShowColorPicker(false);
@@ -781,12 +783,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
   // ── Kart çek (Manuel) ─────────────────────────────────────────────────────
   const handleDraw = useCallback(() => {
     if (!isMyTurn && pendingDrawCount === 0) { showNotif('Sıra sende değil!', '#666'); return; }
-    // Ceza çekimi veya normal çekim
     const card = getRandomCard(usedTaskIds);
     setDrawnCard(card);
   }, [isMyTurn, pendingDrawCount, showNotif, usedTaskIds]);
 
-  // Çekilen kartı ele alma ve devame etme
   const confirmDrawn = useCallback(() => {
     if (!drawnCard) return;
     const card = drawnCard;
@@ -802,14 +802,11 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
       const newCount = pendingDrawCount - 1;
       setPendingDrawCount(newCount);
       if (newCount === 0) {
-        // Cezayı bitirdik, sıra rakibe geçer.
         setIsMyTurn(false);
         sendData({ type: 'turnPass' });
         showNotif('Cezanı çektin. Sıra rakipte.', '#666');
       }
     } else {
-      // Normal çekim (sıra bizdeyken kartımız yoktu çektik)
-      // Çektiği için sıra geçmiyor (Kullanıcı revizesi: Kart çektikten sonra sıra kimdeyse o oynamaya devam etmeli)
       showNotif('Kart çektin. Oynamaya devam edebilirsin veya pas geçebilirsin.', '#6bff4a');
     }
   }, [drawnCard, pendingDrawCount, sendData, showNotif]);
@@ -831,7 +828,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
     const data = card.taskData || {};
 
     if (result === 'ortak_resolved') {
-      const winner = extraData.winner; // 'me', 'them', 'both', 'none'
+      const winner = extraData.winner; 
       let meDraw = 0, themDraw = 0;
       let meMinus = 0, themMinus = 0;
       let message = 'Görev İptal / Berabere!';
@@ -872,13 +869,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
         meDraw, themDraw, meMinus, themMinus,
         message: message
       });
-
-      // Ortak görevden sonra host/oyuncu olarak puanlar hesaplandı.
       showNotif(message, '#00e5ff', 4000);
       return;
     }
 
-    // Normal Görev Sonucu (Saldıran Kişi karar veriyor)
     let penalty = 0;
     let label = '';
     
@@ -888,21 +882,33 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings, usedTas
     } else if (result === 'fail') {
       penalty = card.penaltyFail || 0;
       label = 'Yapamadı';
+    } else if (result === 'refuse') {
+      penalty = card.penaltyRefuse || 0;
+      label = 'Reddetti';
     }
 
     setTaskModal(null);
     setPendingTaskCard(null);
 
-    // Rakibe (savunan) cezayı gönderiyoruz. Çünkü savunan kişi ceza kartı çekecek.
     sendData({ 
       type: 'taskResult', 
       resultLabel: label, 
       penalty 
     });
 
-    showNotif(`Görev tamamlandı. Rakip ${penalty > 0 ? penalty + ' ceza kartı alacak.' : 'ceza almadı.'} Sıra hala sende, normal kart atmaya devam et!`, '#6bff4a');
-    // setIsMyTurn(false) ÇAĞRILMIYOR, sıra bizde kalıyor!
+    showNotif(`Görev tamamlandı. Rakip ${penalty > 0 ? penalty + ' ceza kartı alacak.' : 'ceza almadı.'} Sıra sende!`, '#6bff4a');
   }, [pendingTaskCard, localPlayer, opponentGender, sendData, showNotif, setPlayers]);
+
+  const handleStartTimer = useCallback(() => {
+    setTaskTimerStarted(true);
+    sendData({ type: 'startTimer' });
+  }, [sendData]);
+
+  const handleRollDice = useCallback(() => {
+    const val = Math.floor(Math.random() * 6) + 1;
+    setTaskDiceResult(val);
+    sendData({ type: 'diceRolled', value: val });
+  }, [sendData]);
 
   // ── Portal sürükleme (kaydırarak oyna) ────────────────────────────────────
   const startCardGesture = useCallback((card, idx, e) => {
