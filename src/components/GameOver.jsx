@@ -212,9 +212,7 @@ const GameOver = ({ players, onRestart }) => {
           })}
         </div>
 
-        {/* Aksiyon Butonları */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '320px' }}>
-         {/* Aksiyonlar */}
+        {/* Aksiyonlar */}
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}
           style={{ display: 'flex', gap: '16px', flexDirection: 'column', width: '100%', maxWidth: '300px' }}>
           
