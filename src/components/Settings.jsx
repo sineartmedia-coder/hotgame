@@ -245,6 +245,48 @@ const Settings = ({ settings, setSettings, onNext }) => {
                 </div>
               </div>
 
+              {/* Oyun Süresi */}
+              <div style={{ marginBottom: '28px' }}>
+                <label style={{ display: 'block', color: 'var(--color-green)', fontWeight: 'bold', marginBottom: '8px', fontSize: '1rem' }}>
+                  ⏱ Oyun Süresi (Dakika)
+                </label>
+                <p style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '12px' }}>
+                  Oyunun toplam süresi. Süre içinde oyun bitmezse, sona erecektir.
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[10, 20, 30, 45, 60].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleInputChange('duration', num)}
+                      style={{
+                        flex: 1, minWidth: '55px', padding: '14px 8px', borderRadius: '12px', border: 'none',
+                        background: settings.duration === num
+                          ? 'linear-gradient(135deg, #2dc653, #1a5c2a)'
+                          : 'rgba(255,255,255,0.07)',
+                        color: 'white', fontWeight: '900', fontSize: '1.1rem',
+                        cursor: 'pointer', transition: 'all 0.2s',
+                        boxShadow: settings.duration === num ? '0 4px 15px rgba(45,198,83,0.5)' : 'none',
+                        border: settings.duration === num ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent',
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  value={settings.duration === 0 ? '' : settings.duration}
+                  onChange={(e) => handleInputChange('duration', e.target.value)}
+                  placeholder="Özel süre (dk)..."
+                  min="5" max="300"
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '12px', marginTop: '10px',
+                    background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(45,198,83,0.4)',
+                    color: 'white', fontSize: '1rem', outline: 'none', textAlign: 'center'
+                  }}
+                />
+              </div>
+
               {/* Özet */}
               <div style={{
                 background: 'rgba(0,0,0,0.4)', borderRadius: '16px', padding: '16px',
@@ -257,7 +299,10 @@ const Settings = ({ settings, setSettings, onNext }) => {
                   <strong style={{ color: '#ff7900', fontSize: '1.1rem' }}>{settings.taskCardCount ?? 3}</strong>
                   {' '}görev ={' '}
                   <strong style={{ color: 'white', fontSize: '1.1rem' }}>{(settings.deckSize || 7) + (settings.taskCardCount ?? 3)}</strong>
-                  {' '}kart ile başlar
+                  {' '}kart ile başlar.
+                </p>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', textAlign: 'center', margin: '5px 0 0 0' }}>
+                  Oyun Süresi: <strong style={{ color: '#2dc653', fontSize: '1.1rem' }}>{settings.duration} Dakika</strong>
                 </p>
               </div>
 
@@ -419,14 +464,11 @@ const Settings = ({ settings, setSettings, onNext }) => {
             </motion.div>
           )}
 
-          {/* OYUNLAR (Yer Tutucu) */}
+          {/* OYUNLAR (Ortak Görevler) */}
           {activeTab === 'oyunlar' && (
             <motion.div key="oyunlar" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#aaa' }}>
-                <Gamepad2 size={48} style={{ opacity: 0.2, margin: '0 auto 20px auto' }} />
-                <h3>Çok Yakında!</h3>
-                <p style={{ fontSize: '0.9rem', marginTop: '10px' }}>Mini oyunlar yakında eklenecek.</p>
-              </div>
+              <p style={{ color: '#aaa', marginBottom: '20px', fontSize: '0.9rem' }}>Oyun esnasında rastgele çıkacak ortak görevleri seçin.</p>
+              {renderToggleList(require('../data/cards').MOCK_COMMON_TASKS, 'disabledGames')}
             </motion.div>
           )}
 

@@ -19,10 +19,10 @@ export const COLOR_DARK = {
   sarı:    '#c8960c',
 };
 
-// Kart tipleri
 export const CARD_TYPES = {
   NUMBER:  'number',   // 0-9
   SKIP:    'skip',     // Bloke / Soru
+  REVERSE: 'reverse',  // Yön Değiştir / Soru
   WILD:    'wild',     // Renk seç
   TASK:    'task',     // Görev kartı (oyunumuza özel - +2/+4 yerine)
 };
@@ -46,16 +46,20 @@ export function buildUnoDeck(mockQuestions = []) {
     for (let i = 0; i < 2; i++) {
       let qData = null;
       if (mockQuestions.length > 0) {
-        // Pick a random question
         const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
-        qData = {
-          ...randomQ,
-          penaltyDo: 0,
-          penaltyFail: 0,
-          penaltyRefuse: 0
-        };
+        qData = { ...randomQ, penaltyDo: 0, penaltyFail: 0, penaltyRefuse: 0 };
       }
       deck.push({ id: id++, type: CARD_TYPES.SKIP, color, value: 20, display: '⊘', questionData: qData });
+    }
+
+    // Reverse (Yön Değiştir/Soru) × 2
+    for (let i = 0; i < 2; i++) {
+      let qData = null;
+      if (mockQuestions.length > 0) {
+        const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
+        qData = { ...randomQ, penaltyDo: 0, penaltyFail: 0, penaltyRefuse: 0 };
+      }
+      deck.push({ id: id++, type: CARD_TYPES.REVERSE, color, value: 20, display: '⇄', questionData: qData });
     }
   });
 
@@ -102,10 +106,10 @@ export function buildTaskCards(mockCards, taskCount, holderGender) {
       value: card.points || 10,
       display: card.penaltyAmount === 'random' ? 'Rastgele' : `+${finalPenalty}`,
       taskData: card,
-      // Ceza miktarları: admin panelden geliyorsa onu kullan, yoksa eski hesabı kullan
-      penaltyDo:     0,
-      penaltyRefuse: finalPenalty + 2,
-      penaltyFail:   Math.max(3, finalPenalty - 1),
+      // Ceza miktarları: Başarı = Ceza, Başarısızlık = Ceza * 2
+      penaltyDo:     finalPenalty,
+      penaltyFail:   finalPenalty * 2,
+      penaltyRefuse: 0, // Reddetmek yok
     };
   });
 }
@@ -131,7 +135,27 @@ export function dealGame(deckSize, taskCount, localGender, mockCards, mockQuesti
   // Her oyuncuya deckSize kadar UNO kartı
   const myUnoCards    = fullUno.slice(0, deckSize);
   const theirUnoCards = fullUno.slice(deckSize, deckSize * 2);
-  const remainingDeck = fullUno.slice(deckSize * 2);
+  // Orta desteye karıştırılacak görev kartları (çekilebilir görevler)
+  // 10 adet görev kartı desteye serpiştirilir. Bunlar oynandığında her zaman rakibe etki eder.
+  const poolTasks = mockCards.filter(c => c.target !== 'ortak');
+  const shuffledTasks = shuffle([...poolTasks]);
+  const deckTasks = shuffledTasks.slice(0, 10).map((card, i) => {
+    let finalPenalty = card.penaltyAmount === 'random' ? (Math.floor(Math.random() * 8) + 1) : parseInt(card.penaltyAmount, 10);
+    if (isNaN(finalPenalty)) finalPenalty = 2;
+    return {
+      id: 30000 + i,
+      type: CARD_TYPES.TASK,
+      color: 'wild',
+      value: card.points || 10,
+      display: card.penaltyAmount === 'random' ? 'Rastgele' : `+${finalPenalty}`,
+      taskData: { ...card, title: 'Sürpriz Görev: ' + (card.title || '') },
+      penaltyDo: finalPenalty,
+      penaltyFail: finalPenalty * 2,
+      penaltyRefuse: 0
+    };
+  });
+
+  const remainingDeck = shuffle([...fullUno.slice(deckSize * 2), ...deckTasks]);
 
   // Görev kartları: BENİM elimdekiler RAKİBİM içindir
   // localGender='woman' → bende man görevleri var, rakipte woman görevleri var
@@ -176,12 +200,18 @@ export function canPlayCard(card, topCard, currentColor) {
   // Aynı değer/tip
   if (card.type === CARD_TYPES.NUMBER && topCard.type === CARD_TYPES.NUMBER && card.value === topCard.value) return true;
   if (card.type === CARD_TYPES.SKIP    && topCard.type === CARD_TYPES.SKIP)    return true;
+  if (card.type === CARD_TYPES.REVERSE && topCard.type === CARD_TYPES.REVERSE) return true;
   return false;
 }
+
+import { CARD_SCORES } from './cards';
 
 // Kart puanı (oyun sonu hesabı için)
 export function cardScore(card) {
   if (!card) return 0;
-  if (card.type === CARD_TYPES.TASK) return card.taskData?.points || 10;
-  return card.value || 0;
+  if (card.type === CARD_TYPES.TASK) return CARD_SCORES.task;
+  if (card.type === CARD_TYPES.SKIP) return CARD_SCORES.skip;
+  if (card.type === CARD_TYPES.REVERSE) return CARD_SCORES.reverse;
+  if (card.type === CARD_TYPES.WILD) return CARD_SCORES.wild;
+  return card.value || CARD_SCORES.number;
 }

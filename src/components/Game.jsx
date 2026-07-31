@@ -491,6 +491,9 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
   const [isMyTurn,        setIsMyTurn]        = useState(false);
   const [gameStarted,     setGameStarted]     = useState(false);
   const [pendingDrawCount,setPendingDrawCount]= useState(0); // Manuel ceza kartı çekme sayısı
+  const [pistiCard,       setPistiCard]       = useState(null);
+  const [commonTaskTimer, setCommonTaskTimer] = useState(0);
+  const gameDurationMs = (settings.duration || 60) * 60 * 1000;
 
   // ── UI durumu ─────────────────────────────────────────────────────────────
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -540,9 +543,16 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       setTopCard(dealt.topCard);
       setCurrentColor(dealt.topCard.color);
 
+      // Pick Pişti Card
+      const randomColor = UNO_COLORS[Math.floor(Math.random() * UNO_COLORS.length)];
+      const randomValue = Math.floor(Math.random() * 10);
+      const newPisti = { color: randomColor, value: randomValue, type: CARD_TYPES.NUMBER };
+      setPistiCard(newPisti);
+
       const hostStarts = Math.random() < 0.5;
       setIsMyTurn(hostStarts);
       setGameStarted(true);
+      setCommonTaskTimer(Date.now());
 
       sendData({
         type: 'gameInit',
@@ -551,6 +561,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         topCard: dealt.topCard,
         currentColor: dealt.topCard.color,
         hostStarts,
+        pistiCard: newPisti
       });
     }
   }, [localPlayer, role, gameStarted, settings, sendData]);
@@ -563,8 +574,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         setTheirCount(data.myHandCount);
         setTopCard(data.topCard);
         setCurrentColor(data.currentColor);
+        setPistiCard(data.pistiCard);
         setIsMyTurn(!data.hostStarts);
         setGameStarted(true);
+        setCommonTaskTimer(Date.now());
         break;
 
       case 'cardPlayed':
@@ -577,11 +590,7 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         if (data.handCount === 0) { setGameOver({ iWon: false }); return; }
         
         if (data.card.type === CARD_TYPES.TASK) {
-          if (data.card.taskData?.target === 'ortak') {
-            setPendingTaskCard(data.card);
-            setTaskModal({ card: data.card, isAttacker: false, isOrtak: true });
-            return;
-          }
+          // Rakip görev kartı attı. Biz savunanız.
           setPendingTaskCard(data.card);
           setTaskModal({ card: data.card, isAttacker: false, isOrtak: false });
           return;
@@ -602,21 +611,30 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
 
       case 'taskResult':
         if (data.result === 'ortak_resolved') {
-          // Both receive this if one handles it, but since Attacker handles it and sends to defender:
           const { meDraw, themDraw, meMinus, themMinus, message } = data;
           showNotif(message, '#ffcc00', 4000);
-          // 'meDraw' means the one who resolved it (Attacker) draws. So defender (us) draws 'themDraw'.
           if (themDraw > 0) setPendingDrawCount(themDraw);
           if (themMinus > 0) {
             setPlayers(p => ({ ...p, [localPlayer]: { ...p[localPlayer], score: (p[localPlayer].score || 0) - themMinus } }));
           }
-          // Diğer oyuncunun da puanını güncelleyelim ki lokal ekranda doğru görünsün
           if (meMinus > 0) {
              setPlayers(p => ({ ...p, [opponentGender]: { ...p[opponentGender], score: (p[opponentGender].score || 0) - meMinus } }));
           }
+          setTaskModal(null);
         } else {
-          showNotif(`Rakip görevi/soruyu ${data.resultLabel}! ${data.penalty > 0 ? data.penalty + ' kart çekiyor...' : 'Ceza yok!'}`, '#ffcc00', 4000);
+          // Bu bir normal görev sonucudur. Attacker "yaptı" veya "yapamadı" seçti, defender olarak sonucu ve cezayı alıyoruz.
+          const { penalty, resultLabel } = data;
+          showNotif(`Görev Sonucu: ${resultLabel}! ${penalty > 0 ? penalty + ' ceza kartı alıyorsun.' : 'Ceza yok.'}`, '#ffcc00', 4000);
+          if (penalty > 0) setPendingDrawCount(penalty);
+          setTaskModal(null);
         }
+        break;
+
+      case 'commonTaskTrigger':
+        // Ortak görev tetiklendi! İki oyuncuya da aynı anda çıkar.
+        const commonCard = data.card;
+        setPendingTaskCard(commonCard);
+        setTaskModal({ card: commonCard, isAttacker: role === 'host', isOrtak: true }); // Sadece Host kararı verir!
         break;
 
       case 'cardDrawn':
@@ -640,6 +658,33 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     const unsub = onData(handleData);
     return unsub;
   }, [onData, handleData]);
+
+  // ── Ortak Görev Zamanlayıcısı ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!gameStarted || role !== 'host') return;
+    const interval = setInterval(() => {
+      // Rastgele bir zamanda veya 5 dakikada bir (Şimdilik test için 5 dakika = 300,000 ms, ama biz her 1 dakikada %10 şans verelim)
+      // Kullanıcı "5 dakika içerisinde oyun bitmemişse aniden ortaya çıkacak" dedi.
+      const elapsed = Date.now() - commonTaskTimer;
+      if (elapsed > 300000) { // 5 dakika (300 saniye)
+        setCommonTaskTimer(Date.now()); // Süreyi sıfırla
+        const poolOrtak = require('../data/cards').MOCK_COMMON_TASKS || [];
+        if (poolOrtak.length > 0) {
+          const cardData = poolOrtak[Math.floor(Math.random() * poolOrtak.length)];
+          const card = {
+            id: 99000 + Math.random(),
+            type: CARD_TYPES.TASK,
+            taskData: cardData,
+            display: 'Ortak Görev'
+          };
+          sendData({ type: 'commonTaskTrigger', card });
+          setPendingTaskCard(card);
+          setTaskModal({ card, isAttacker: true, isOrtak: true }); // Host yönetir
+        }
+      }
+    }, 10000); // Her 10 saniyede bir kontrol et
+    return () => clearInterval(interval);
+  }, [gameStarted, role, commonTaskTimer, sendData]);
 
   // ── Kart oyna ─────────────────────────────────────────────────────────────
   const playCard = useCallback((card, idx) => {
@@ -675,14 +720,10 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     }
     
     if (card.type === CARD_TYPES.TASK) {
-      if (card.taskData?.target === 'ortak') {
-        // Ortak görevse biz yönetiyoruz, rakip bekliyor
-        setPendingTaskCard(card);
-        setTaskModal({ card, isAttacker: true, isOrtak: true });
-        return;
-      }
-      setIsMyTurn(false);
-      showNotif('Görev rakibe iletildi, cevap bekleniyor... ⏳', '#ff7900', 0);
+      // Biz görev kartı attık. Biz attacker'ız.
+      setPendingTaskCard(card);
+      setTaskModal({ card, isAttacker: true, isOrtak: false });
+      // Sıramız BİTMİYOR! Görev atıldıktan sonra normal kart atmaya devam edebilmeliyiz.
       return;
     }
     
@@ -792,32 +833,36 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
         message: message
       });
 
-      // After resolving, since attacker played the card, it's now the defender's turn.
-      setIsMyTurn(false);
-      sendData({ type: 'turnPass' });
+      // Ortak görevden sonra host/oyuncu olarak puanlar hesaplandı.
       showNotif(message, '#00e5ff', 4000);
       return;
     }
 
-    const penalty = result === 'done' ? card.penaltyDo : result === 'fail' ? card.penaltyFail : card.penaltyRefuse;
-    const label   = result === 'done' ? 'Devam Edildi' : result === 'fail' ? 'Yapamadın' : 'Reddettin';
+    // Normal Görev Sonucu (Saldıran Kişi karar veriyor)
+    let penalty = 0;
+    let label = '';
+    
+    if (result === 'done') {
+      penalty = card.penaltyDo || 0;
+      label = 'Yaptı';
+    } else if (result === 'fail') {
+      penalty = card.penaltyFail || 0;
+      label = 'Yapamadı';
+    }
 
     setTaskModal(null);
     setPendingTaskCard(null);
 
-    // Rakibe sonucu haber ver
-    sendData({ type: 'taskResult', result, penalty, resultLabel: label });
+    // Rakibe (savunan) cezayı gönderiyoruz. Çünkü savunan kişi ceza kartı çekecek.
+    sendData({ 
+      type: 'taskResult', 
+      resultLabel: label, 
+      penalty 
+    });
 
-    if (penalty === 0) {
-      showNotif(`${card.type === CARD_TYPES.SKIP ? 'Soru' : 'Görev'} cevaplandı/yapıldı! Ceza almadın. Sıra rakipte.`, '#6bff4a');
-      setTimeout(() => {
-        sendData({ type: 'turnPass' });
-      }, 300);
-    } else {
-      setPendingDrawCount(penalty);
-      showNotif(`${card.type === CARD_TYPES.SKIP ? 'Soru' : 'Görev'} sonucu: ${label}! Desteden ${penalty} KART ÇEKMELİSİN.`, '#ff3366', 0);
-    }
-  }, [pendingTaskCard, sendData, showNotif]);
+    showNotif(`Görev tamamlandı. Rakip ${penalty > 0 ? penalty + ' ceza kartı alacak.' : 'ceza almadı.'} Sıra hala sende, normal kart atmaya devam et!`, '#6bff4a');
+    // setIsMyTurn(false) ÇAĞRILMIYOR, sıra bizde kalıyor!
+  }, [pendingTaskCard, localPlayer, opponentGender, sendData, showNotif, setPlayers]);
 
   // ── Portal sürükleme (kaydırarak oyna) ────────────────────────────────────
   const startCardGesture = useCallback((card, idx, e) => {
@@ -985,6 +1030,14 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
           >{notification.msg}</motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── PİŞTİ KARTI ─────────────────────────────────────────────────── */}
+      {pistiCard && (
+        <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px', textShadow: '0 0 10px #ff3366', letterSpacing: '2px' }}>PİŞTİ KARTI</span>
+          <UnoCard card={pistiCard} size="sm" shadow />
+        </div>
+      )}
 
       {/* ── RAKİP ALANI ─────────────────────────────────────────────────── */}
       <div style={{ padding:'20px 20px 10px', display:'flex',flexDirection:'column',alignItems:'center',gap:'15px',flexShrink:0, zIndex: 10 }}>

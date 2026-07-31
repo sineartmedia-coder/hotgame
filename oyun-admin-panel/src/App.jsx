@@ -3,10 +3,11 @@ import './index.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState('tasks');
-  const [data, setData] = useState({ tasks: [], games: [], questions: [] });
+  const [data, setData] = useState({ tasks: [], games: [], questions: [], penalties: [], scores: { number: 5, skip: 20, reverse: 20, wild: 50, task: 10 } });
   const [loading, setLoading] = useState(true);
 
   // Form states for Tasks
+  const [cardTitle, setCardTitle] = useState('');
   const [taskText, setTaskText] = useState('');
   const [penalty, setPenalty] = useState('2');
   const [target, setTarget] = useState('ortak');
@@ -16,7 +17,6 @@ function App() {
   const [isGame, setIsGame] = useState(false);
 
   // Form states for Games (Ortak Görevler)
-  const [winnerDrawCount, setWinnerDrawCount] = useState('');
   const [loserDrawCount, setLoserDrawCount] = useState('');
   const [winnerMinusPoints, setWinnerMinusPoints] = useState('');
   const [winType, setWinType] = useState('single');
@@ -30,7 +30,13 @@ function App() {
       const res = await fetch('/api/cards');
       const json = await res.json();
       if (json) {
-        setData(json);
+        setData({
+          tasks: json.tasks || [],
+          games: json.games || [],
+          questions: json.questions || [],
+          penalties: json.penalties || [],
+          scores: json.scores || { number: 5, skip: 20, reverse: 20, wild: 50, task: 10 }
+        });
       }
     } catch (err) {
       console.error('Failed to fetch data', err);
@@ -56,17 +62,17 @@ function App() {
     e.preventDefault();
     const newItem = {
       id: Date.now(),
+      title: cardTitle,
       text: taskText,
       points: penalty === 'random' ? 0 : parseInt(penalty, 10) * 5,
       penaltyAmount: penalty === 'random' ? 'random' : parseInt(penalty, 10),
       target: type === 'games' ? 'ortak' : target,
-      isTimeBased: type === 'questions' ? false : isTimeBased,
-      duration: (type === 'questions' || !isTimeBased) ? 0 : parseInt(duration, 10),
-      isDiceBased: type === 'questions' ? false : isDiceBased,
-      isGame: type === 'games' ? true : (type === 'questions' ? false : isGame),
+      isTimeBased: (type === 'questions' || type === 'penalties') ? false : isTimeBased,
+      duration: (type === 'questions' || type === 'penalties' || !isTimeBased) ? 0 : parseInt(duration, 10),
+      isDiceBased: (type === 'questions' || type === 'penalties') ? false : isDiceBased,
+      isGame: type === 'games' ? true : ((type === 'questions' || type === 'penalties') ? false : isGame),
       category: type === 'games' ? 'ortak' : (target === 'ortak' ? 'ortak' : 'normal'),
       ...(type === 'games' ? {
-        winnerDrawCount: parseInt(winnerDrawCount || '0', 10),
         loserDrawCount: parseInt(loserDrawCount || '0', 10),
         winnerMinusPoints: parseInt(winnerMinusPoints || '0', 10),
         winType: winType
@@ -76,6 +82,7 @@ function App() {
     const newData = { ...data, [type]: [...(data[type] || []), newItem] };
     saveData(newData);
     setTaskText('');
+    setCardTitle('');
   };
 
   const handleDeleteItem = (id, type) => {
@@ -95,20 +102,84 @@ function App() {
         <button className={activeTab === 'tasks' ? 'active' : ''} onClick={() => setActiveTab('tasks')}>Görevler</button>
         <button className={activeTab === 'games' ? 'active' : ''} onClick={() => setActiveTab('games')}>Ortak Görevler</button>
         <button className={activeTab === 'questions' ? 'active' : ''} onClick={() => setActiveTab('questions')}>Sorular</button>
+        <button className={activeTab === 'penalties' ? 'active' : ''} onClick={() => setActiveTab('penalties')}>Cezalar</button>
+        <button className={activeTab === 'scores' ? 'active' : ''} onClick={() => setActiveTab('scores')}>Puan Ayarları</button>
       </nav>
 
       <main>
+        {activeTab === 'scores' ? (
+          <div className="tab-pane">
+            <div className="form-section">
+              <h2>Oyun Sonu Puanlama Ayarları</h2>
+              <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '20px' }}>Kaybeden oyuncunun elinde kalan UNO kartlarının puan karşılıklarını belirleyin.</p>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Sayı Kartları (0-9)</label>
+                  <input type="number" value={data.scores.number} onChange={e => {
+                    const newScores = { ...data.scores, number: parseInt(e.target.value) || 0 };
+                    setData({ ...data, scores: newScores });
+                  }} onBlur={() => saveData(data)} />
+                  <small style={{ color: '#888' }}>Standart: 5 puan (veya kendi değeri)</small>
+                </div>
+                <div className="form-group">
+                  <label>Soru / Bloke Kartları (⊘)</label>
+                  <input type="number" value={data.scores.skip} onChange={e => {
+                    const newScores = { ...data.scores, skip: parseInt(e.target.value) || 0 };
+                    setData({ ...data, scores: newScores });
+                  }} onBlur={() => saveData(data)} />
+                  <small style={{ color: '#888' }}>Standart: 20 puan</small>
+                </div>
+                <div className="form-group">
+                  <label>Yön Değiştir Kartları</label>
+                  <input type="number" value={data.scores.reverse} onChange={e => {
+                    const newScores = { ...data.scores, reverse: parseInt(e.target.value) || 0 };
+                    setData({ ...data, scores: newScores });
+                  }} onBlur={() => saveData(data)} />
+                  <small style={{ color: '#888' }}>Standart: 20 puan</small>
+                </div>
+                <div className="form-group">
+                  <label>Joker Kartları (Renk Seç)</label>
+                  <input type="number" value={data.scores.wild} onChange={e => {
+                    const newScores = { ...data.scores, wild: parseInt(e.target.value) || 0 };
+                    setData({ ...data, scores: newScores });
+                  }} onBlur={() => saveData(data)} />
+                  <small style={{ color: '#888' }}>Standart: 50 puan</small>
+                </div>
+                <div className="form-group">
+                  <label>Görev Kartları</label>
+                  <input type="number" value={data.scores.task} onChange={e => {
+                    const newScores = { ...data.scores, task: parseInt(e.target.value) || 0 };
+                    setData({ ...data, scores: newScores });
+                  }} onBlur={() => saveData(data)} />
+                  <small style={{ color: '#888' }}>Standart: 10 puan</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="tab-pane">
           <div className="form-section">
             <h2>
               {activeTab === 'tasks' ? 'Yeni Görev Ekle' : 
-               activeTab === 'games' ? 'Yeni Ortak Görev Ekle' : 'Yeni Soru Ekle'}
+               activeTab === 'games' ? 'Yeni Ortak Görev Ekle' : 
+               activeTab === 'penalties' ? 'Yeni Ceza Ekle' : 'Yeni Soru Ekle'}
             </h2>
             <form onSubmit={(e) => handleAddItem(e, activeTab)}>
               <div className="form-group">
+                <label>Başlık (Kısa Ad)</label>
+                <input 
+                  type="text"
+                  required 
+                  value={cardTitle} 
+                  onChange={e => setCardTitle(e.target.value)}
+                  placeholder="Örn: Ateşli Öpücük, Zıplama vs."
+                />
+              </div>
+              <div className="form-group">
                 <label>
                   {activeTab === 'tasks' ? 'Görev Metni' : 
-                   activeTab === 'games' ? 'Ortak Görev Metni' : 'Soru Metni'}
+                   activeTab === 'games' ? 'Ortak Görev Metni' : 
+                   activeTab === 'penalties' ? 'Ceza Metni' : 'Soru Metni'}
                 </label>
                 <textarea 
                   required 
@@ -153,10 +224,6 @@ function App() {
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Kazanan Kaç Kart Çeker?</label>
-                      <input type="number" value={winnerDrawCount} onChange={e => setWinnerDrawCount(e.target.value)} placeholder="0" />
-                    </div>
-                    <div className="form-group">
                       <label>Kaybeden Kaç Kart Çeker?</label>
                       <input type="number" value={loserDrawCount} onChange={e => setLoserDrawCount(e.target.value)} placeholder="0" />
                     </div>
@@ -168,7 +235,7 @@ function App() {
                 )}
               </div>
 
-              {activeTab !== 'questions' && (
+              {activeTab !== 'questions' && activeTab !== 'penalties' && (
                 <div className="form-row options-row">
                   <label className="checkbox-label">
                     <input type="checkbox" checked={isDiceBased} onChange={e => setIsDiceBased(e.target.checked)} />
@@ -205,13 +272,13 @@ function App() {
             <div className="card-list">
               {(data[activeTab] || []).map(item => (
                 <div key={item.id} className="card">
+                  <h4 style={{ margin: '0 0 5px 0', color: '#fff', fontSize: '1.1rem' }}>{item.title}</h4>
                   <p className="card-text">{item.text}</p>
                   <div className="card-meta">
-                    {activeTab !== 'questions' && <span className="badge">Hedef: {item.target}</span>}
+                    {activeTab !== 'questions' && activeTab !== 'penalties' && <span className="badge">Hedef: {item.target}</span>}
                     {activeTab === 'tasks' && <span className="badge penalty">Ceza: {item.penaltyAmount === 'random' ? 'Rastgele' : `+${item.penaltyAmount}`}</span>}
                     {activeTab === 'games' && (
                       <>
-                        <span className="badge">Kazanan Çeker: {item.winnerDrawCount}</span>
                         <span className="badge penalty">Kaybeden Çeker: {item.loserDrawCount}</span>
                         {item.winnerMinusPoints > 0 && <span className="badge">Puan Avantajı: -{item.winnerMinusPoints}</span>}
                       </>
@@ -226,6 +293,7 @@ function App() {
             </div>
           </div>
         </div>
+        )}
       </main>
     </div>
   );

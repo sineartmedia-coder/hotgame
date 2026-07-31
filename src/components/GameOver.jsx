@@ -106,10 +106,12 @@ const GameOver = ({ players, onRestart }) => {
     onRestart();
   };
 
-  const bonus = (p) => p.timeRemaining > 0 ? Math.floor(p.timeRemaining / 60) * 2 : 0;
-  const wScore = players.woman.score + bonus(players.woman);
-  const mScore = players.man.score   + bonus(players.man);
-  const winner = wScore > mScore ? 'woman' : wScore < mScore ? 'man' : 'tie';
+  // The score represents negative points (cards in hand) + adjustments from tasks
+  // Lower score is better.
+  const wScore = players.woman.score;
+  const mScore = players.man.score;
+  const winner = wScore < mScore ? 'woman' : wScore > mScore ? 'man' : 'tie';
+  const loser  = winner === 'woman' ? 'man' : winner === 'man' ? 'woman' : null;
 
   const fmt = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
 
@@ -169,6 +171,15 @@ const GameOver = ({ players, onRestart }) => {
           <h2 style={{ fontSize: '2.5rem', margin: '0 0 28px', color: 'white', fontWeight: '900' }}>🤝 Berabere!</h2>
         )}
 
+        {loser && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            style={{ marginBottom: '24px' }}>
+            <p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 10px', textAlign: 'center' }}>
+              Kaybeden: <strong style={{ color: '#ff0844' }}>{players[loser].name}</strong>, cezasını çekecek!
+            </p>
+          </motion.div>
+        )}
+
         {/* Skor Kartları */}
         <div style={{ display: 'flex', gap: '16px', width: '100%', maxWidth: '480px', marginBottom: '28px' }}>
           {(['woman', 'man']).map(p => {
@@ -195,8 +206,6 @@ const GameOver = ({ players, onRestart }) => {
                 <div style={{ fontSize: '0.8rem', color: '#ccc', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span>✅ {pl.completed} Tamamlandı</span>
                   <span>❌ {pl.rejected} Reddedildi</span>
-                  <span>⏱️ {fmt(pl.timeRemaining)} Kaldı</span>
-                  {bonus(pl) > 0 && <span style={{ color: '#f5af19' }}>+{bonus(pl)} Süre Bonusu</span>}
                 </div>
               </motion.div>
             );
@@ -205,34 +214,34 @@ const GameOver = ({ players, onRestart }) => {
 
         {/* Aksiyon Butonları */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', maxWidth: '320px' }}>
-          <motion.button
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowPenalties(true)}
-            style={{
-              padding: '18px', borderRadius: '20px', fontWeight: '900', fontSize: '1.2rem',
-              background: 'linear-gradient(135deg, #9d4edd, #ff0844)',
-              border: 'none', color: 'white', cursor: 'pointer',
-              boxShadow: '0 10px 30px rgba(157,78,221,0.5)'
-            }}
-          >
-            🎭 CEZA SEÇ
-          </motion.button>
+         {/* Aksiyonlar */}
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}
+          style={{ display: 'flex', gap: '16px', flexDirection: 'column', width: '100%', maxWidth: '300px' }}>
+          
+          {loser && (
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={() => setShowPenalties(true)}
+              style={{
+                padding: '16px', background: 'linear-gradient(135deg, #ff0844, #ffb199)',
+                color: 'white', borderRadius: '30px', border: 'none',
+                fontWeight: '900', fontSize: '1.2rem', cursor: 'pointer',
+                boxShadow: '0 10px 25px rgba(255,8,68,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+              }}>
+              <span>😱</span> {players[loser].name} İÇİN CEZA SEÇ
+            </motion.button>
+          )}
 
-          <motion.button
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }}
-            whileTap={{ scale: 0.95 }}
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={handleRestart}
             style={{
-              padding: '16px', borderRadius: '20px', fontWeight: '900', fontSize: '1.1rem',
-              background: 'rgba(255,255,255,0.1)',
-              border: '2px solid rgba(255,255,255,0.3)', color: 'white', cursor: 'pointer',
-              backdropFilter: 'blur(10px)'
-            }}
-          >
-          🔄 Tekrar Oyna
+              padding: '16px', background: 'rgba(255,255,255,0.1)',
+              color: 'white', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.2)',
+              fontWeight: '700', fontSize: '1.1rem', cursor: 'pointer',
+              display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px'
+            }}>
+            <span>🔄</span> Tekrar Oyna
           </motion.button>
-        </div>
+        </motion.div>
         </div> {/* /screen-scroll */}
       </div>
     </>
