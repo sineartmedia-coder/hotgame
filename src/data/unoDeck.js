@@ -29,7 +29,7 @@ export const CARD_TYPES = {
 };
 
 // Standart UNO destesi oluştur
-export function buildUnoDeck() {
+export function buildUnoDeck(mockQuestions = []) {
   const deck = [];
   let id = 1;
 
@@ -54,7 +54,18 @@ export function buildUnoDeck() {
 
   // Wild × 4
   for (let i = 0; i < 4; i++) {
-    deck.push({ id: id++, type: CARD_TYPES.WILD, color: 'wild', value: 50, display: '🌈' });
+    let qData = null;
+    if (mockQuestions.length > 0) {
+      // Pick a random question
+      const randomQ = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
+      qData = {
+        ...randomQ,
+        penaltyDo: 0,
+        penaltyFail: randomQ.penaltyAmount || 3,
+        penaltyRefuse: randomQ.penaltyAmount ? randomQ.penaltyAmount + 2 : 5
+      };
+    }
+    deck.push({ id: id++, type: CARD_TYPES.WILD, color: 'wild', value: 50, display: '❓', questionData: qData });
   }
 
   return deck;
@@ -84,12 +95,12 @@ export function buildTaskCards(mockCards, taskCount, holderGender) {
     type: CARD_TYPES.TASK,
     color: 'wild',           // Görev kartları her renge atılabilir
     value: card.points || 10,
-    display: `+${Math.max(2, Math.floor((card.points || 10) / 5))}`,
+    display: `+${card.penaltyAmount || Math.max(2, Math.floor((card.points || 10) / 5))}`,
     taskData: card,
-    // Ceza miktarları puanına göre otomatik hesap
-    penaltyDo:     Math.max(2, Math.floor((card.points || 10) / 5)),
-    penaltyRefuse: Math.max(4, Math.floor((card.points || 10) / 2.5)),
-    penaltyFail:   Math.max(3, Math.floor((card.points || 10) / 3.5)),
+    // Ceza miktarları: admin panelden geliyorsa onu kullan, yoksa eski hesabı kullan
+    penaltyDo:     0, // Eskiden görevi yapana da kart çektiriyorduk, artık mantıksız olabilir ama 0 yapalım
+    penaltyRefuse: (card.penaltyAmount ? card.penaltyAmount + 2 : Math.max(4, Math.floor((card.points || 10) / 2.5))),
+    penaltyFail:   (card.penaltyAmount || Math.max(3, Math.floor((card.points || 10) / 3.5))),
   }));
 }
 
@@ -107,9 +118,9 @@ export function shuffle(arr) {
 // deckSize: UNO kartı sayısı
 // taskCount: görev kartı sayısı
 // localGender: yerel oyuncunun cinsiyeti
-export function dealGame(deckSize, taskCount, localGender, mockCards) {
+export function dealGame(deckSize, taskCount, localGender, mockCards, mockQuestions = []) {
   // Tüm UNO destesini oluştur
-  const fullUno = shuffle(buildUnoDeck());
+  const fullUno = shuffle(buildUnoDeck(mockQuestions));
 
   // Her oyuncuya deckSize kadar UNO kartı
   const myUnoCards    = fullUno.slice(0, deckSize);

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useMotionValue, animate as mvAnimate } from 'framer-motion';
-import { MOCK_CARDS } from '../data/cards';
+import { MOCK_CARDS, MOCK_QUESTIONS } from '../data/cards';
 import { dealGame, canPlayCard, CARD_TYPES, UNO_COLORS, buildUnoDeck, shuffle } from '../data/unoDeck';
 import { useMultiplayer } from '../context/MultiplayerContext';
+import { Mic, MicOff } from 'lucide-react';
 
 // ─── Temalar: Kadın vs Erkek ──────────────────────────────────────────────────
 const THEMES = {
@@ -170,7 +171,7 @@ const UnoCard = ({ card, size = 'md', shadow = false }) => {
           <div style={{ display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'space-between', padding: size==='sm'?'5px':'12px', zIndex: 2, width: '100%', height: '100%' }}>
             <span style={{ fontSize: size==='sm'?'1rem':size==='lg'?'2rem':'1.5rem', textShadow:'0 0 15px rgba(255,60,0,0.8)' }}>🔥</span>
             
-            {size !== 'sm' && card.taskData?.title && (
+            {size !== 'sm' && (card.taskData?.title || card.taskData?.text) && (
               <div style={{
                 color:'rgba(255,255,255,0.95)', fontWeight:'600',
                 fontSize: size==='lg' ? '1.1rem' : 'clamp(0.65rem,1.8vw,0.85rem)',
@@ -178,7 +179,7 @@ const UnoCard = ({ card, size = 'md', shadow = false }) => {
                 textShadow:'0 2px 4px rgba(0,0,0,0.8)',
                 flex: 1, display: 'flex', alignItems: 'center'
               }}>
-                {card.taskData.title}
+                {card.taskData.title || (card.taskData.text.substring(0, 15) + '...')}
               </div>
             )}
             
@@ -276,19 +277,31 @@ const ZoomOverlay = ({ card, onClose }) => {
         <UnoCard card={card} size="lg" shadow />
       </motion.div>
 
-      {card.type === CARD_TYPES.TASK && card.taskData && (
+      {((card.type === CARD_TYPES.TASK && card.taskData) || (card.type === CARD_TYPES.WILD && card.questionData)) && (
         <motion.div
           initial={{ opacity:0,y:20 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.15 }}
           onClick={e => e.stopPropagation()}
           style={{ background:'rgba(15,15,22,0.9)', borderRadius:'24px', padding:'24px', maxWidth:'340px', width:'100%', textAlign:'center', border:'1px solid rgba(255,60,0,0.3)', boxShadow: '0 10px 40px rgba(0,0,0,0.8)' }}
         >
-          <h3 style={{ color:'#fff',fontWeight:'600',fontSize:'1.2rem',marginBottom:'12px' }}>{card.taskData.title}</h3>
-          <p style={{ color:'rgba(255,255,255,0.7)',lineHeight:1.6,fontSize:'0.95rem',marginBottom:'20px' }}>{card.taskData.text}</p>
-          <div style={{ display:'flex',justifyContent:'center',gap:'8px',flexWrap:'wrap',fontSize:'0.8rem' }}>
-            <span style={{ background:'rgba(46,125,50,0.2)',color:'#6bff4a',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(46,125,50,0.5)' }}>✅ Yapar: +{card.penaltyDo}</span>
-            <span style={{ background:'rgba(230,81,0,0.2)',color:'#ffb703',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(230,81,0,0.5)' }}>😅 Yapamaz: +{card.penaltyFail}</span>
-            <span style={{ background:'rgba(198,40,40,0.2)',color:'#ff3366',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(198,40,40,0.5)' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
-          </div>
+          {(() => {
+            const data = card.type === CARD_TYPES.WILD ? card.questionData : card.taskData;
+            return (
+              <>
+                <h3 style={{ color:'#fff',fontWeight:'600',fontSize:'1.2rem',marginBottom:'12px' }}>{data.title || (card.type === CARD_TYPES.WILD ? 'Soru (Joker)' : 'Görev')}</h3>
+                <p style={{ color:'rgba(255,255,255,0.7)',lineHeight:1.6,fontSize:'0.95rem',marginBottom:'10px' }}>{data.text}</p>
+                <div style={{ display:'flex',justifyContent:'center',gap:'8px',marginBottom:'20px' }}>
+                  {data.isDiceBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎲 Zar At</span>}
+                  {data.isTimeBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>⏱ {data.duration}sn</span>}
+                  {data.isGame && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎮 Oyun</span>}
+                </div>
+                <div style={{ display:'flex',justifyContent:'center',gap:'8px',flexWrap:'wrap',fontSize:'0.8rem' }}>
+                  <span style={{ background:'rgba(46,125,50,0.2)',color:'#6bff4a',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(46,125,50,0.5)' }}>✅ Yapar/Cevaplar: +{card.penaltyDo}</span>
+                  <span style={{ background:'rgba(230,81,0,0.2)',color:'#ffb703',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(230,81,0,0.5)' }}>😅 Yapamaz/Bilemez: +{card.penaltyFail}</span>
+                  <span style={{ background:'rgba(198,40,40,0.2)',color:'#ff3366',padding:'4px 12px',borderRadius:'12px',fontWeight:'700',border:'1px solid rgba(198,40,40,0.5)' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
+                </div>
+              </>
+            );
+          })()}
         </motion.div>
       )}
       <p style={{ color:'rgba(255,255,255,0.4)',fontSize:'0.85rem', letterSpacing: '1px' }}>KAPATMAK İÇİN DOKUN</p>
@@ -298,7 +311,10 @@ const ZoomOverlay = ({ card, onClose }) => {
 
 // ─── Görev Modal (bottom sheet) ───────────────────────────────────────────────
 const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, onClose }) => {
-  if (!card?.taskData) return null;
+  const isQuestion = card?.type === CARD_TYPES.WILD;
+  const data = isQuestion ? card?.questionData : card?.taskData;
+  if (!data) return null;
+  
   return (
     <motion.div
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -314,37 +330,42 @@ const TaskModal = ({ card, isAttacker, opponentName, opponentAvatar, onResult, o
             {isAttacker ? '⚔️' : opponentAvatar}
           </div>
           <h3 style={{ color: '#fff', fontSize:'1.4rem',fontWeight:'300', letterSpacing: '1px' }}>
-            {isAttacker ? `${opponentName}'a Görev!` : '🎯 Sana Görev Geldi!'}
+            {isAttacker ? (isQuestion ? `${opponentName}'a Soru!` : `${opponentName}'a Görev!`) : (isQuestion ? '🎯 Sana Soru Geldi!' : '🎯 Sana Görev Geldi!')}
           </h3>
         </div>
         <div style={{ background:'rgba(255,255,255,0.03)',borderRadius:'20px',padding:'20px',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'20px' }}>
-          <p style={{ fontWeight:'600',fontSize:'1.1rem',color:'#fff',marginBottom:'10px' }}>{card.taskData.title}</p>
-          <p style={{ color:'rgba(255,255,255,0.7)',lineHeight:1.6,fontSize:'0.95rem' }}>{card.taskData.text}</p>
+          <p style={{ fontWeight:'600',fontSize:'1.1rem',color:'#fff',marginBottom:'10px' }}>{data.title || (isQuestion ? 'Soru Kartı' : 'Yeni Görev')}</p>
+          <p style={{ color:'rgba(255,255,255,0.7)',lineHeight:1.6,fontSize:'0.95rem',marginBottom:'10px' }}>{data.text}</p>
+          <div style={{ display:'flex',justifyContent:'center',gap:'8px',marginBottom:'10px' }}>
+            {data.isDiceBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎲 Zar Atılacak</span>}
+            {data.isTimeBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>⏱ Süre: {data.duration}sn</span>}
+            {data.isGame && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎮 Mini Oyun</span>}
+          </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.8rem', color: '#6bff4a', background: 'rgba(107,255,74,0.1)', padding: '6px 12px', borderRadius: '12px' }}>✅ Yapar: +{card.penaltyDo}</span>
-          <span style={{ fontSize: '0.8rem', color: '#ffb703', background: 'rgba(255,183,3,0.1)', padding: '6px 12px', borderRadius: '12px' }}>😅 Yapamaz: +{card.penaltyFail}</span>
+          <span style={{ fontSize: '0.8rem', color: '#6bff4a', background: 'rgba(107,255,74,0.1)', padding: '6px 12px', borderRadius: '12px' }}>✅ Yapar/Cevaplar: +{card.penaltyDo}</span>
+          <span style={{ fontSize: '0.8rem', color: '#ffb703', background: 'rgba(255,183,3,0.1)', padding: '6px 12px', borderRadius: '12px' }}>😅 Yapamaz/Bilemez: +{card.penaltyFail}</span>
           <span style={{ fontSize: '0.8rem', color: '#ff3366', background: 'rgba(255,51,102,0.1)', padding: '6px 12px', borderRadius: '12px' }}>🚫 Reddeder: +{card.penaltyRefuse}</span>
         </div>
 
         {isAttacker && (
           <motion.button whileTap={{ scale:0.95 }} onClick={onClose}
             style={{ width:'100%',padding:'18px',background:'linear-gradient(135deg,#ff7900,#f5af19)',color:'white',border:'none',borderRadius:'16px',fontWeight:'800',fontSize:'1.1rem',cursor:'pointer', boxShadow: '0 8px 20px rgba(255,121,0,0.4)' }}>
-            GÖREVİ GÖNDER
+            {isQuestion ? 'SORUYU GÖNDER' : 'GÖREVİ GÖNDER'}
           </motion.button>
         )}
         {!isAttacker && onResult && (
           <div style={{ display:'flex',flexDirection:'column',gap:'12px' }}>
             <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('done')}
               style={{ padding:'16px',background:'linear-gradient(135deg, #1b5e20, #2e7d32)',color:'white',border:'1px solid rgba(107,255,74,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-              ✅ Yaptım! (+{card.penaltyDo} kart)
+              {isQuestion ? `✅ Cevapladım! (+${card.penaltyDo} kart)` : `✅ Yaptım! (+${card.penaltyDo} kart)`}
             </motion.button>
             <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('fail')}
               style={{ padding:'16px',background:'linear-gradient(135deg, #e65100, #f57c00)',color:'white',border:'1px solid rgba(255,183,3,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
-              😅 Yapamadım (+{card.penaltyFail} kart)
+              {isQuestion ? `😅 Cevaplayamadım (+${card.penaltyFail} kart)` : `😅 Yapamadım (+${card.penaltyFail} kart)`}
             </motion.button>
             <motion.button whileTap={{ scale:0.95 }} onClick={() => onResult('refuse')}
-              style={{ padding:'16px',background:'linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
+              style={{ padding:'16px',background:'background:linear-gradient(135deg, #b71c1c, #c62828)',color:'white',border:'1px solid rgba(255,51,102,0.4)',borderRadius:'16px',fontWeight:'700',cursor:'pointer',fontSize:'1rem' }}>
               🚫 Reddediyorum (+{card.penaltyRefuse} kart)
             </motion.button>
           </div>
@@ -382,7 +403,7 @@ const DrawnCardPreview = ({ card, onDismiss, pendingCount }) => (
 
 // ─── Ana bileşen ──────────────────────────────────────────────────────────────
 const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
-  const { localPlayer, sendData, onData, role } = useMultiplayer();
+  const { localPlayer, sendData, onData, role, remoteStream, isMuted, toggleMute } = useMultiplayer();
   const theme = THEMES[localPlayer] || THEMES.woman;
   const opponentGender = localPlayer === 'woman' ? 'man' : 'woman';
 
@@ -423,13 +444,20 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     }
   }, []);
 
+  const remoteAudioRef = useRef(null);
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
   // ── Oyun başlangıcı ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!localPlayer || gameStarted) return;
     if (role === 'host') {
       const deckSize  = settings.deckSize || 7;
       const taskCount = settings.taskCardCount ?? 3;
-      const dealt = dealGame(deckSize, taskCount, localPlayer, MOCK_CARDS);
+      const dealt = dealGame(deckSize, taskCount, localPlayer, MOCK_CARDS, MOCK_QUESTIONS);
 
       setMyHand(dealt.myHand);
       setTheirCount(dealt.theirHand.length);
@@ -477,6 +505,11 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
           return;
         }
         if (data.card.type === CARD_TYPES.TASK) {
+          setPendingTaskCard(data.card);
+          setTaskModal({ card: data.card, isAttacker: false });
+          return;
+        }
+        if (data.card.type === CARD_TYPES.WILD && data.card.questionData) {
           setPendingTaskCard(data.card);
           setTaskModal({ card: data.card, isAttacker: false });
           return;
@@ -550,6 +583,11 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       showNotif('Görev rakibe iletildi, cevap bekleniyor... ⏳', '#ff7900', 0);
       return;
     }
+    if (card.type === CARD_TYPES.WILD && card.questionData) {
+      setIsMyTurn(false);
+      showNotif('Soru rakibe iletildi, cevap bekleniyor... ⏳', '#ff7900', 0);
+      return;
+    }
     if (card.type === CARD_TYPES.SKIP || card.type === CARD_TYPES.REVERSE) {
       showNotif('Sırayı atladın! ⊘ Tekrar sen oynuyorsun.', '#33eeff');
       return;
@@ -615,13 +653,13 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
     sendData({ type: 'taskResult', result, penalty, resultLabel: label });
 
     if (penalty === 0) {
-      showNotif(`Görev sonucu: ${label}! Ceza almadın. Sıra rakipte.`, '#6bff4a');
+      showNotif(`${card.type === CARD_TYPES.WILD ? 'Soru' : 'Görev'} sonucu: ${label}! Ceza almadın. Sıra rakipte.`, '#6bff4a');
       setTimeout(() => {
         sendData({ type: 'turnPass' });
       }, 300);
     } else {
       setPendingDrawCount(penalty);
-      showNotif(`Görev sonucu: ${label}! Desteden ${penalty} KART ÇEKMELİSİN.`, '#ff3366', 0);
+      showNotif(`${card.type === CARD_TYPES.WILD ? 'Soru' : 'Görev'} sonucu: ${label}! Desteden ${penalty} KART ÇEKMELİSİN.`, '#ff3366', 0);
     }
   }, [pendingTaskCard, sendData, showNotif]);
 
@@ -729,6 +767,34 @@ const Game = ({ players, setPlayers, startingPlayer, onFinish, settings }) => {
       onPointerCancel={endCardGesture}
       style={{ width:'100%',height:'100%', background:theme.bg, display:'flex',flexDirection:'column',position:'relative', overflow:'hidden' }}
     >
+      <audio ref={remoteAudioRef} autoPlay />
+      
+      {/* Mikrofon Butonu */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={toggleMute}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 100,
+          background: isMuted ? 'rgba(255, 51, 102, 0.2)' : 'rgba(107, 255, 74, 0.2)',
+          border: `1px solid ${isMuted ? '#ff3366' : '#6bff4a'}`,
+          borderRadius: '50%',
+          width: '45px',
+          height: '45px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: isMuted ? '#ff3366' : '#6bff4a',
+          boxShadow: `0 0 15px ${isMuted ? 'rgba(255, 51, 102, 0.4)' : 'rgba(107, 255, 74, 0.4)'}`,
+          backdropFilter: 'blur(5px)',
+          cursor: 'pointer'
+        }}
+      >
+        {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+      </motion.button>
 
       {/* Ortam ışığı */}
       <div style={{

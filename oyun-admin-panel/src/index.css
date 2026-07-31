@@ -1,0 +1,203 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+header {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 1rem;
+}
+
+h1 {
+  color: #ffb703;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  color: #888;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tabs button:hover {
+  color: #fff;
+}
+
+.tabs button.active {
+  color: #ffb703;
+  border-bottom-color: #ffb703;
+}
+
+.form-section, .list-section {
+  background: #1e1e1e;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.form-group.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-row > * {
+  flex: 1;
+}
+
+label {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #bbb;
+}
+
+input, select, textarea {
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #2a2a2a;
+  color: #fff;
+  font-family: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #ffb703;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.options-row {
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  background: #2a2a2a;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.btn-primary {
+  background: #ff7900;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.btn-primary:hover {
+  background: #e66d00;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card {
+  background: #2a2a2a;
+  border: 1px solid #333;
+  padding: 1rem;
+  border-radius: 6px;
+  position: relative;
+}
+
+.card-text {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  padding-right: 3rem;
+}
+
+.card-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: #444;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.badge.penalty {
+  background: #e63946;
+}
+
+.badge.addon {
+  background: #4361ee;
+}
+
+.badge.game {
+  background: #2dc653;
+}
+
+.btn-delete {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #e63946;
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #d62828;
+}
+
+.loading {
+  text-align: center;
+  margin-top: 3rem;
+  font-size: 1.2rem;
+  color: #ffb703;
+}
