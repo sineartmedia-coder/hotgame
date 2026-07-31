@@ -201,6 +201,8 @@ export function canPlayCard(card, topCard, currentColor) {
   if (card.type === CARD_TYPES.TASK) return true;
   // Wild her zaman atılabilir
   if (card.type === CARD_TYPES.WILD) return true;
+  // Ortadaki kart bir Görev Kartıysa, üzerine İSTENİLEN kart atılabilir!
+  if (topCard.type === CARD_TYPES.TASK) return true;
   // Aynı renk
   if (card.color === currentColor) return true;
   // Aynı değer/tip

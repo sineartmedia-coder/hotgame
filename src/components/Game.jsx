@@ -324,6 +324,18 @@ const ZoomOverlay = ({ card, onClose }) => {
 const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, onResult, onClose }) => {
   const isQuestion = card?.type === CARD_TYPES.SKIP && card?.questionData;
   const data = isQuestion ? card?.questionData : card?.taskData;
+  
+  // Timer state
+  const [timeLeft, setTimeLeft] = useState(data?.isTimeBased ? data.duration : null);
+
+  useEffect(() => {
+    if (!data?.isTimeBased || timeLeft === null || timeLeft <= 0) return;
+    const timerId = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, [data?.isTimeBased, timeLeft]);
+
   if (!data) return null;
   
   return (
@@ -349,9 +361,23 @@ const TaskModal = ({ card, isAttacker, isOrtak, opponentName, opponentAvatar, on
           <p style={{ color:'rgba(255,255,255,0.7)',lineHeight:1.6,fontSize:'0.95rem',marginBottom:'10px' }}>{data.text}</p>
           <div style={{ display:'flex',justifyContent:'center',gap:'8px',marginBottom:'10px' }}>
             {data.isDiceBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎲 Zar Atılacak</span>}
-            {data.isTimeBased && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>⏱ Süre: {data.duration}sn</span>}
             {data.isGame && <span style={{ background:'rgba(255,255,255,0.1)', padding:'4px 10px', borderRadius:'12px', fontSize:'0.8rem', color:'#fff' }}>🎮 Mini Oyun</span>}
           </div>
+
+          {data.isTimeBased && (
+            <div style={{ textAlign: 'center', margin: '20px 0' }}>
+              <div style={{ 
+                fontSize: '3rem', fontWeight: '900', 
+                color: timeLeft > 0 ? '#ffb703' : '#ff3366',
+                textShadow: timeLeft > 0 ? '0 0 20px rgba(255,183,3,0.5)' : '0 0 20px rgba(255,51,102,0.8)'
+              }}>
+                ⏱ {timeLeft}
+              </div>
+              <p style={{ color: timeLeft > 0 ? '#aaa' : '#ff3366', fontWeight: 'bold' }}>
+                {timeLeft > 0 ? 'Saniye Kaldı!' : 'SÜRE BİTTİ!'}
+              </p>
+            </div>
+          )}
         </div>
         
         {!isQuestion && !isOrtak && (
